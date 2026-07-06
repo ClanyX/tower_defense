@@ -1,0 +1,78 @@
+name: Realease Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  APP_NAME: tower_defense
+
+jobs:
+  build-release:
+    name: Build production version (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Dowland repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependences
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: release-cache
+
+      - name: Install system dependences for Bevy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++ \
+            pkg-config \
+            libx11-dev \
+            libasound2-dev \
+            libudev-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libvulkan-dev
+
+      - name: Compilation (Release build)
+        run: cargo build --release
+
+      - name: Folder & App & Assets
+        run: |
+          mkdir -p dist
+          # Copy binary
+          cp target/release/${{ env.APP_NAME }} dist/
+
+          # Copy assets
+          if [ -d "assets" ]; then cp -r assets dist/; fi
+
+          # Copy doc and lic
+          if [ -f "README.md" ]; then cp README.md dist/; fi
+          if [ -f "LICENSE" ]; then cp LICENSE dist/; fi
+
+      - name: Upload app as the Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.APP_NAME }}-linux
+          path: dist/
+          retention-days: 30
+
+      # VOLITELNÉ: Pokud bylo workflow spuštěno tagem (v1.0.0), vytvoří na GitHubu oficiální Release a nahraje do něj archiv s aplikací
+      - name: Create zip archive
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd dist
+          zip -r ../${{ env.APP_NAME }}-linux.zip .
+          cd ..
+
+      - name: Publication to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.APP_NAME }}-linux.zip

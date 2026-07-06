@@ -1,0 +1,51 @@
+name: CI pipeline
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-and-test:
+    name: Formating & Linter & Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup repository
+        uses: actions/checkout@v4
+
+      - name: Install rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cache dependences
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ci-cache
+
+      - name: Install system dependences for Bevy
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            g++ \
+            pkg-config \
+            libx11-dev \
+            libasound2-dev \
+            libudev-dev \
+            libxkbcommon-dev \
+            libwayland-dev \
+            libvulkan-dev
+
+      - name: Control format (cargo fmt)
+        run: cargo fmt --all -- --check
+
+      - name: Linter (cargo clippy)
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
+
+      - name: Start tests
+        run: cargo test --workspace
