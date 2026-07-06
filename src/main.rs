@@ -607,19 +607,18 @@ pub fn spawn_settings_ui(parent: &mut ChildSpawnerCommands) {
         });
 }
 
+type SettingsButtonComponents = (
+    &'static Interaction,
+    &'static SettingsButton,
+    &'static mut BackgroundColor,
+    &'static mut BorderColor,
+    &'static Children,
+);
+
 // System to change background, border, and text colors based on selected options and mouse interactions
 fn update_launcher_button_colors(
     settings: Res<GameSettings>,
-    mut q_buttons: Query<
-        (
-            &Interaction,
-            &SettingsButton,
-            &mut BackgroundColor,
-            &mut BorderColor,
-            &Children,
-        ),
-        With<Button>,
-    >,
+    mut q_buttons: Query<SettingsButtonComponents, With<Button>>,
     mut q_children: Query<&mut TextColor>,
 ) {
     for (interaction, button_type, mut bg_color, mut border_color, children) in &mut q_buttons {
@@ -747,12 +746,12 @@ fn update_launcher_button_colors(
     }
 }
 
+type ButtonInteractionComponents = (&'static Interaction, &'static SettingsButton);
+type ButtonInteractionFilter = (Changed<Interaction>, With<Button>);
+
 // System to handle mouse click inputs on UI buttons
 fn handle_button_clicks(
-    mut interaction_query: Query<
-        (&Interaction, &SettingsButton),
-        (Changed<Interaction>, With<Button>),
-    >,
+    mut interaction_query: Query<ButtonInteractionComponents, ButtonInteractionFilter>,
     mut settings: ResMut<GameSettings>,
     mut next_state: ResMut<NextState<AppState>>,
     mut q_window: Query<&mut Window, With<PrimaryWindow>>,
