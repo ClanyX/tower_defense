@@ -449,15 +449,15 @@ fn toggle_settings_visibility(
     show_settings: Res<ShowInGameSettings>,
     mut query: Query<&mut Node, With<InGameSettingsModal>>,
 ) {
-    if show_settings.is_changed() {
-        if let Ok(mut node) = query.single_mut() {
-            node.display = if show_settings.0 {
-                //TODO: Stop the game time
-                Display::Flex
-            } else {
-                Display::None
-            };
-        }
+    if show_settings.is_changed()
+        && let Ok(mut node) = query.single_mut()
+    {
+        node.display = if show_settings.0 {
+            //TODO: Stop the game time
+            Display::Flex
+        } else {
+            Display::None
+        };
     }
 }
 
@@ -766,24 +766,24 @@ fn handle_button_clicks(
                 SettingsButton::FullscreenToggle(val) => {
                     settings.fullscreen = *val;
                     // If in-game, apply settings immediately
-                    if current_state.get() == &AppState::InGame {
-                        if let Ok(mut window) = q_window.single_mut() {
-                            window.mode = if *val {
-                                WindowMode::BorderlessFullscreen(MonitorSelection::Primary)
-                            } else {
-                                WindowMode::Windowed
-                            };
-                        }
+                    if current_state.get() == &AppState::InGame
+                        && let Ok(mut window) = q_window.single_mut()
+                    {
+                        window.mode = if *val {
+                            WindowMode::BorderlessFullscreen(MonitorSelection::Primary)
+                        } else {
+                            WindowMode::Windowed
+                        };
                     }
                 }
                 SettingsButton::ResolutionSelect(res) => {
                     settings.resolution = *res;
                     // If in-game, apply settings immediately
-                    if current_state.get() == &AppState::InGame {
-                        if let Ok(mut window) = q_window.single_mut() {
-                            let (w, h) = res.dimensions();
-                            window.resolution.set(w, h);
-                        }
+                    if current_state.get() == &AppState::InGame
+                        && let Ok(mut window) = q_window.single_mut()
+                    {
+                        let (w, h) = res.dimensions();
+                        window.resolution.set(w, h);
                     }
                 }
                 SettingsButton::StartGame => {
