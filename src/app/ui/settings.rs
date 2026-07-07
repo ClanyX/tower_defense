@@ -4,17 +4,17 @@ use bevy::window::{MonitorSelection, PrimaryWindow, WindowMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolutionOption {
-    HD,     // 1280x720
+    Hd,     // 1280x720
     FullHD, // 1920x1080
-    QHD,    // 2560x1440
+    Qhd,    // 2560x1440
 }
 
 impl ResolutionOption {
     pub fn dimensions(&self) -> (f32, f32) {
         match self {
-            ResolutionOption::HD => (1280.0, 720.0),
+            ResolutionOption::Hd => (1280.0, 720.0),
             ResolutionOption::FullHD => (1920.0, 1080.0),
-            ResolutionOption::QHD => (2560.0, 1440.0),
+            ResolutionOption::Qhd => (2560.0, 1440.0),
         }
     }
 }
@@ -29,7 +29,7 @@ impl Default for GameSettings {
     fn default() -> Self {
         Self {
             fullscreen: false,
-            resolution: ResolutionOption::HD,
+            resolution: ResolutionOption::Hd,
         }
     }
 }
@@ -318,9 +318,9 @@ pub fn spawn_settings_ui(parent: &mut ChildSpawnerCommands) {
             },))
                 .with_children(|btn_row| {
                     let options = [
-                        (ResolutionOption::HD, "1280x720 (HD)"),
+                        (ResolutionOption::Hd, "1280x720 (HD)"),
                         (ResolutionOption::FullHD, "1920x1080 (FHD)"),
-                        (ResolutionOption::QHD, "2560x1440 (QHD)"),
+                        (ResolutionOption::Qhd, "2560x1440 (QHD)"),
                     ];
                     for (opt, label) in options {
                         btn_row
