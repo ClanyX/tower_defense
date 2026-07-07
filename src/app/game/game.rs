@@ -1,5 +1,5 @@
-use bevy::prelude::*;
 use crate::app::ui::settings::*;
+use bevy::prelude::*;
 
 #[derive(Component)]
 pub struct CleanupGame;

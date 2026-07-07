@@ -1,7 +1,6 @@
+use crate::AppState;
 use bevy::prelude::*;
 use bevy::window::{MonitorSelection, PrimaryWindow, WindowMode};
-use crate::AppState;
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResolutionOption {

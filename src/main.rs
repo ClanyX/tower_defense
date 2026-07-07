@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::app::ui::settings::*;
 use crate::app::game::game::*;
+use crate::app::ui::settings::*;
 
 mod app;
 
