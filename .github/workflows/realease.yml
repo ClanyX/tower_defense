@@ -78,3 +78,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ env.APP_NAME }}-linux.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
