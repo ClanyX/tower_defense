@@ -1,3 +1,4 @@
+//use crate::app::game::enemy::*;
 use crate::app::game::player::*;
 use crate::app::ui::settings::*;
 use bevy::prelude::*;
@@ -13,7 +14,7 @@ pub fn spawn_game(mut commands: Commands, q_window: Query<&Window, With<PrimaryW
     let window_height = window.height();
 
     //instance of the player
-    let player: Player = Player::new(window_width, window_height);
+    let player: Player = Player::new(&window_width, &window_height);
 
     // Camera to render the UI
     commands.spawn((Camera2d, CleanupGame));
@@ -207,6 +208,7 @@ pub fn spawn_game(mut commands: Commands, q_window: Query<&Window, With<PrimaryW
                 });
         });
 
+    // SPAWN PLAYER
     Player::spawn_player(commands, player);
 }
 
