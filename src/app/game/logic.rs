@@ -212,7 +212,7 @@ pub fn spawn_game(mut commands: Commands, q_window: Query<&Window, With<PrimaryW
     Player::spawn_player(&mut commands, player);
 
     for _ in 0..3 {
-        Enemy::spawn_enemy(&mut commands, &window_height);
+        Enemy::spawn_enemy(&mut commands, window_width, window_height);
     }
 }
 
