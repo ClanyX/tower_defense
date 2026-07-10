@@ -9,7 +9,10 @@ pub struct CleanupGame;
 
 // Setup the empty game scene and HUD
 pub fn spawn_game(mut commands: Commands, q_window: Query<&Window, With<PrimaryWindow>>) {
-    let window = q_window.single().unwrap();
+    let window = match q_window.single() {
+        Ok(w) => w,
+        Err(_) => return,
+    };
     let window_width = window.width();
     let window_height = window.height();
 
