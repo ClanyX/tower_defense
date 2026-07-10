@@ -1,4 +1,4 @@
-//use crate::app::game::enemy::*;
+use crate::app::game::enemy::*;
 use crate::app::game::player::*;
 use crate::app::ui::settings::*;
 use bevy::prelude::*;
@@ -209,7 +209,11 @@ pub fn spawn_game(mut commands: Commands, q_window: Query<&Window, With<PrimaryW
         });
 
     // SPAWN PLAYER
-    Player::spawn_player(commands, player);
+    Player::spawn_player(&mut commands, player);
+
+    for _ in 0..3 {
+        Enemy::spawn_enemy(&mut commands, &window_height);
+    }
 }
 
 pub fn despawn_game(mut commands: Commands, query: Query<Entity, With<CleanupGame>>) {

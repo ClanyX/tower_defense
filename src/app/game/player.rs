@@ -17,7 +17,7 @@ impl Player {
         }
     }
 
-    pub fn spawn_player(mut commands: Commands, player: Player) {
+    pub fn spawn_player(commands: &mut Commands, player: Player) {
         commands.spawn((
             Sprite {
                 color: Color::from(Srgba::GREEN),
