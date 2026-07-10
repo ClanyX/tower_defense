@@ -1,11 +1,24 @@
+use crate::app::game::enemy::*;
+use crate::app::game::player::*;
 use crate::app::ui::settings::*;
 use bevy::prelude::*;
+use bevy::window::PrimaryWindow;
 
 #[derive(Component)]
 pub struct CleanupGame;
 
 // Setup the empty game scene and HUD
-pub fn spawn_game(mut commands: Commands) {
+pub fn spawn_game(mut commands: Commands, q_window: Query<&Window, With<PrimaryWindow>>) {
+    let window = match q_window.single() {
+        Ok(w) => w,
+        Err(_) => return,
+    };
+    let window_width = window.width();
+    let window_height = window.height();
+
+    //instance of the player
+    let player: Player = Player::new(&window_width, &window_height);
+
     // Camera to render the UI
     commands.spawn((Camera2d, CleanupGame));
 
@@ -197,6 +210,14 @@ pub fn spawn_game(mut commands: Commands) {
                         });
                 });
         });
+
+    // SPAWN PLAYER
+    Player::spawn_player(&mut commands, player);
+
+    for _ in 0..3 {
+        let enemy = Enemy::new(&window_width, &window_height);
+        Enemy::spawn_enemy(&mut commands, enemy);
+    }
 }
 
 pub fn despawn_game(mut commands: Commands, query: Query<Entity, With<CleanupGame>>) {

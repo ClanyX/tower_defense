@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::app::game::enemy::{move_enemy, update_enemy_hp_text};
+use crate::app::game::game_management::player_shooting;
 use crate::app::game::logic::*;
 use crate::app::ui::settings::*;
 
@@ -39,7 +41,14 @@ fn main() {
         // In-game updates
         .add_systems(
             Update,
-            (in_game_input, toggle_settings_visibility).run_if(in_state(AppState::InGame)),
+            (
+                in_game_input,
+                toggle_settings_visibility,
+                move_enemy,
+                update_enemy_hp_text,
+                player_shooting,
+            )
+                .run_if(in_state(AppState::InGame)),
         )
         .run();
 }

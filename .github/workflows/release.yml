@@ -1,4 +1,4 @@
-name: Realease Build
+name: Release Build
 
 on:
   workflow_dispatch:
@@ -15,22 +15,35 @@ env:
 
 jobs:
   build-release:
-    name: Build production version (Linux)
-    runs-on: ubuntu-latest
+    name: Build production version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            artifact_suffix: linux
+            binary_name: tower_defense
+            zip_suffix: linux
+          - os: windows-latest
+            artifact_suffix: windows
+            binary_name: tower_defense.exe
+            zip_suffix: windows
 
     steps:
-      - name: Dowland repository
+      - name: Download repository
         uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Cache dependences
+      - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          key: release-cache
+          key: release-cache-${{ matrix.os }}
 
-      - name: Install system dependences for Bevy
+      - name: Install system dependencies for Bevy (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -47,10 +60,11 @@ jobs:
         run: cargo build --release
 
       - name: Folder & App & Assets
+        shell: bash
         run: |
           mkdir -p dist
           # Copy binary
-          cp target/release/${{ env.APP_NAME }} dist/
+          cp target/release/${{ matrix.binary_name }} dist/
 
           # Copy assets
           if [ -d "assets" ]; then cp -r assets dist/; fi
@@ -62,20 +76,29 @@ jobs:
       - name: Upload app as the Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ env.APP_NAME }}-linux
+          name: ${{ env.APP_NAME }}-${{ matrix.artifact_suffix }}
           path: dist/
           retention-days: 30
 
-      - name: Create zip archive
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Create zip archive (Linux)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.os == 'ubuntu-latest'
+        shell: bash
         run: |
           cd dist
-          zip -r ../${{ env.APP_NAME }}-linux.zip .
+          zip -r ../${{ env.APP_NAME }}-${{ matrix.zip_suffix }}.zip .
+          cd ..
+
+      - name: Create zip archive (Windows)
+        if: startsWith(github.ref, 'refs/tags/') && matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          cd dist
+          7z a -r ../${{ env.APP_NAME }}-${{ matrix.zip_suffix }}.zip *
           cd ..
 
       - name: Publication to GitHub Releases
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.APP_NAME }}-linux.zip
+          files: ${{ env.APP_NAME }}-${{ matrix.zip_suffix }}.zip
           token: ${{ secrets.GITHUB_TOKEN }}
