@@ -40,19 +40,19 @@ pub fn player_shooting(
         }
 
         // Apply damage to the nearest enemy
-        if let Some((enemy_entity, _)) = nearest_enemy {
-            if let Ok((_, _, mut enemy)) = q_enemies.get_mut(enemy_entity) {
-                if enemy.hp > 0 {
-                    //TODO: change value depend on the player damage
-                    enemy.hp -= 1;
-                    // If enemy dies, despawn it (Bevy 0.19 automatically handles hierarchy cleanup)
-                    if enemy.hp == 0 {
-                        commands.entity(enemy_entity).despawn();
-                    }
+        if let Some((enemy_entity, _)) = nearest_enemy
+            && let Ok((_, _, mut enemy)) = q_enemies.get_mut(enemy_entity)
+        {
+            if enemy.hp > 0 {
+                //TODO: change value depend on the player damage
+                enemy.hp -= 1;
+                // If enemy dies, despawn it (Bevy 0.19 automatically handles hierarchy cleanup)
+                if enemy.hp == 0 {
+                    commands.entity(enemy_entity).despawn();
                 }
-                // Reset reload timer for the next shot
-                player.reload.reset();
             }
+            // Reset reload timer for the next shot
+            player.reload.reset();
         }
     }
 }
