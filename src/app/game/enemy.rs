@@ -8,7 +8,7 @@ pub struct Enemy {
     pub x: f32,
     pub y: f32,
     pub size: u32,
-    pub hp: u32,
+    pub hp: i32,
     pub direction: Vec2,
     pub speed: f32,
 }

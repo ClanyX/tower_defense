@@ -7,6 +7,7 @@ pub struct Player {
     pub y: f32,
     pub size: u32,
     pub reload: Timer,
+    pub damage: u32,
 }
 
 impl Player {
@@ -19,6 +20,7 @@ impl Player {
             y: 0.0,
             size: 50,
             reload: timer,
+            damage: 2,
         }
     }
 

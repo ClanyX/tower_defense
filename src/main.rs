@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 use crate::app::game::enemy::{move_enemy, update_enemy_hp_text};
-use crate::app::game::game_management::player_shooting;
 use crate::app::game::logic::*;
 use crate::app::ui::settings::*;
 
@@ -24,6 +23,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(GamePlugin)
         .init_state::<AppState>()
         .insert_resource(GameSettings::default())
         .insert_resource(ShowInGameSettings::default())
