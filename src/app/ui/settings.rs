@@ -196,16 +196,18 @@ pub fn despawn_launcher_ui(mut commands: Commands, query: Query<Entity, With<Cle
 pub fn toggle_settings_visibility(
     show_settings: Res<ShowInGameSettings>,
     mut query: Query<&mut Node, With<InGameSettingsModal>>,
+    mut time: ResMut<Time<Virtual>>,
 ) {
     if show_settings.is_changed()
         && let Ok(mut node) = query.single_mut()
     {
-        node.display = if show_settings.0 {
-            //TODO: Stop the game time
-            Display::Flex
+        if show_settings.0 {
+            node.display = Display::Flex;
+            time.pause();
         } else {
-            Display::None
-        };
+            node.display = Display::None;
+            time.unpause();
+        }
     }
 }
 
@@ -512,25 +514,31 @@ pub fn handle_button_clicks(
             match button_action {
                 SettingsButton::FullscreenToggle(val) => {
                     settings.fullscreen = *val;
-                    // If in-game, apply settings immediately
-                    if current_state.get() == &AppState::InGame
-                        && let Ok(mut window) = q_window.single_mut()
-                    {
-                        window.mode = if *val {
-                            WindowMode::BorderlessFullscreen(MonitorSelection::Primary)
-                        } else {
-                            WindowMode::Windowed
-                        };
+                    // If in-game, apply settings immediately and restart to launcher menu
+                    if current_state.get() == &AppState::InGame {
+                        if let Ok(mut window) = q_window.single_mut() {
+                            window.mode = if *val {
+                                WindowMode::BorderlessFullscreen(MonitorSelection::Primary)
+                            } else {
+                                WindowMode::Windowed
+                            };
+                            window.title = "Game Launcher".to_string();
+                        }
+                        show_in_game_settings.0 = false;
+                        next_state.set(AppState::StartupMenu);
                     }
                 }
                 SettingsButton::ResolutionSelect(res) => {
                     settings.resolution = *res;
-                    // If in-game, apply settings immediately
-                    if current_state.get() == &AppState::InGame
-                        && let Ok(mut window) = q_window.single_mut()
-                    {
-                        let (w, h) = res.dimensions();
-                        window.resolution.set(w, h);
+                    // If in-game, apply settings immediately and restart to launcher menu
+                    if current_state.get() == &AppState::InGame {
+                        if let Ok(mut window) = q_window.single_mut() {
+                            let (w, h) = res.dimensions();
+                            window.resolution.set(w, h);
+                            window.title = "Game Launcher".to_string();
+                        }
+                        show_in_game_settings.0 = false;
+                        next_state.set(AppState::StartupMenu);
                     }
                 }
                 SettingsButton::StartGame => {

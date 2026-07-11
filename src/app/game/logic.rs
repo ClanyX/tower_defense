@@ -21,8 +21,13 @@ impl Plugin for GamePlugin {
     }
 }
 
-// Setup the empty game scene and HUD
-pub fn spawn_game(mut commands: Commands, q_window: Query<&Window, With<PrimaryWindow>>) {
+pub fn spawn_game(
+    mut commands: Commands,
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    mut time: ResMut<Time<Virtual>>,
+) {
+    time.unpause();
+
     let window = match q_window.single() {
         Ok(w) => w,
         Err(_) => return,
