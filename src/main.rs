@@ -27,6 +27,7 @@ fn main() {
         .init_state::<AppState>()
         .insert_resource(GameSettings::default())
         .insert_resource(ShowInGameSettings::default())
+        .insert_resource(KillCount(0))
         // Startup launcher setup / cleanup
         .add_systems(OnEnter(AppState::StartupMenu), spawn_launcher_ui)
         .add_systems(OnExit(AppState::StartupMenu), despawn_launcher_ui)
@@ -47,6 +48,7 @@ fn main() {
                 move_enemy,
                 update_enemy_hp_text,
                 player_shooting,
+                update_kill_count_text,
             )
                 .run_if(in_state(AppState::InGame)),
         )

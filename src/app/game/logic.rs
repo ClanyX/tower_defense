@@ -10,6 +10,12 @@ use std::time::Duration;
 #[derive(Component)]
 pub struct CleanupGame;
 
+#[derive(Component)]
+pub struct KillCountText;
+
+#[derive(Resource)]
+pub struct KillCount(pub u32);
+
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
@@ -27,6 +33,9 @@ pub fn spawn_game(
     mut time: ResMut<Time<Virtual>>,
 ) {
     time.unpause();
+
+    // Reset/insert the kill count resource on game start
+    commands.insert_resource(KillCount(0));
 
     let window = match q_window.single() {
         Ok(w) => w,
@@ -78,6 +87,17 @@ pub fn spawn_game(
                             ..default()
                         },
                         TextColor(Color::srgb(0.9, 0.9, 0.95)),
+                    ));
+
+                    // KILL COUNT TEXT IN THE MIDDLE
+                    tb.spawn((
+                        Text::new("KILLS: 0"),
+                        TextFont {
+                            font_size: FontSize::Px(18.0),
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.9, 0.9, 0.95)),
+                        KillCountText,
                     ));
 
                     // settings toggle button
@@ -257,6 +277,7 @@ pub fn player_shooting(
     time: Res<Time>,
     mut q_player: Query<(&Transform, &mut Player)>,
     mut q_enemies: Query<(Entity, &Transform, &mut Enemy)>,
+    mut kill_count: ResMut<KillCount>,
 ) {
     // Only shoot if the player is spawned
     let (player_transform, mut player) = match q_player.single_mut() {
@@ -298,6 +319,7 @@ pub fn player_shooting(
                 // If enemy dies, despawn it (Bevy 0.19 automatically handles hierarchy cleanup)
                 if enemy.hp <= 0 {
                     commands.entity(enemy_entity).despawn();
+                    kill_count.0 += 1;
                 }
             }
             // Reset reload timer for the next shot
@@ -318,4 +340,16 @@ pub fn enemy_push(mut commands: Commands, q_window: Query<&Window, With<PrimaryW
 
     let enemy = Enemy::new(&window_width, &window_height);
     Enemy::spawn_enemy(&mut commands, enemy);
+}
+
+// System to update the KILLS text in the HUD dynamically
+pub fn update_kill_count_text(
+    kill_count: Res<KillCount>,
+    mut q_text: Query<&mut Text, With<KillCountText>>,
+) {
+    if kill_count.is_changed() {
+        for mut text in &mut q_text {
+            text.0 = format!("KILLS: {}", kill_count.0);
+        }
+    }
 }
