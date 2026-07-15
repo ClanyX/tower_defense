@@ -1,6 +1,7 @@
 use crate::AppState;
 use crate::app::game::enemy::*;
 use crate::app::game::player::*;
+use crate::app::game::tower::Tower;
 use crate::app::ui::settings::*;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
@@ -43,10 +44,12 @@ pub fn spawn_game(
     };
 
     let window_width = window.width();
-    let window_height = window.height();
+    let window_height = &window.height();
 
     //instance of the player
-    let player: Player = Player::new(&window_width, &window_height);
+    let player: Player = Player::new(&window_width);
+    //instance of the tower
+    let tower: Tower = Tower::new(&window_width, window_height);
 
     // Camera to render the UI
     commands.spawn((Camera2d, CleanupGame));
@@ -250,6 +253,9 @@ pub fn spawn_game(
                         });
                 });
         });
+
+    // SPAWN TOWER
+    Tower::spawn_tower(&mut commands, tower);
 
     // SPAWN PLAYER
     Player::spawn_player(&mut commands, player);
