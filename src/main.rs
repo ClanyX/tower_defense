@@ -50,6 +50,7 @@ fn main() {
                 player_shooting,
                 update_kill_count_text,
                 update_tower_hp_text,
+                check_game_over,
             )
                 .run_if(in_state(AppState::InGame)),
         )

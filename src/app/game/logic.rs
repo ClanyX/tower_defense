@@ -404,3 +404,21 @@ pub fn update_tower_hp_text(
         }
     }
 }
+
+// System to detect game over condition (tower HP <= 0) and return to launcher
+pub fn check_game_over(
+    q_tower: Query<&Tower>,
+    mut next_state: ResMut<NextState<AppState>>,
+    mut q_window: Query<&mut Window, With<PrimaryWindow>>,
+    mut show_in_game_settings: ResMut<ShowInGameSettings>,
+) {
+    if let Ok(tower) = q_tower.single()
+        && tower.hp <= 0
+    {
+        if let Ok(mut window) = q_window.single_mut() {
+            window.title = "Game Launcher".to_string();
+        }
+        show_in_game_settings.0 = false;
+        next_state.set(AppState::StartupMenu);
+    }
+}
