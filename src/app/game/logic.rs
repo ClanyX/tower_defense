@@ -1,7 +1,7 @@
 use crate::AppState;
 use crate::app::game::enemy::*;
 use crate::app::game::player::*;
-use crate::app::game::tower::Tower;
+use crate::app::game::tower::*;
 use crate::app::ui::settings::*;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
@@ -22,8 +22,11 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,
-            enemy_push
-                .run_if(on_timer(Duration::from_secs(2)).and_then(in_state(AppState::InGame))),
+            (
+                tower_damage,
+                enemy_push.run_if(on_timer(Duration::from_secs(2))),
+            )
+                .run_if(in_state(AppState::InGame)),
         );
     }
 }
@@ -356,6 +359,48 @@ pub fn update_kill_count_text(
     if kill_count.is_changed() {
         for mut text in &mut q_text {
             text.0 = format!("KILLS: {}", kill_count.0);
+        }
+    }
+}
+
+//Detect damage to the tower
+pub fn tower_damage(
+    mut commands: Commands,
+    q_enemies: Query<(Entity, &Transform, &Enemy)>,
+    mut q_tower: Query<(&Transform, &mut Tower)>,
+) {
+    //Check if the Tower is spawned
+    let (tower_transform, mut tower) = match q_tower.single_mut() {
+        Ok(t) => t,
+        Err(_) => return,
+    };
+
+    let tower_left_edge = tower_transform.translation.x - tower.width / 2.0;
+
+    for (enemy_entity, enemy_transform, enemy) in &q_enemies {
+        let enemy_right_edge = enemy_transform.translation.x + enemy.size as f32 / 2.0;
+        if enemy_right_edge >= tower_left_edge {
+            commands.entity(enemy_entity).despawn();
+            if tower.hp > 0 {
+                tower.hp -= 1;
+            }
+        }
+    }
+}
+
+// System to update the text value on the tower with the current HP of the struct
+pub fn update_tower_hp_text(
+    q_towers: Query<(&Tower, &Children)>,
+    mut q_text: Query<&mut Text2d, With<TowerHpText>>,
+) {
+    for (tower, children) in &q_towers {
+        for &child in children {
+            if let Ok(mut text) = q_text.get_mut(child) {
+                let hp_str = tower.hp.to_string();
+                if text.0 != hp_str {
+                    text.0 = hp_str;
+                }
+            }
         }
     }
 }

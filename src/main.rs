@@ -49,6 +49,7 @@ fn main() {
                 update_enemy_hp_text,
                 player_shooting,
                 update_kill_count_text,
+                update_tower_hp_text,
             )
                 .run_if(in_state(AppState::InGame)),
         )
