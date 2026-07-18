@@ -106,6 +106,34 @@ pub fn spawn_game(
                         KillCountText,
                     ));
 
+                    // upgrade toggle button
+                    tb.spawn((
+                        Button,
+                        Node {
+                            width: Val::Px(120.0),
+                            height: Val::Px(36.0),
+                            border: UiRect::all(Val::Px(2.0)),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Center,
+                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                            ..default()
+                        },
+                        Interaction::None,
+                        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.0)),
+                        BorderColor::all(Color::srgba(0.0, 0.0, 0.0, 0.0)),
+                        SettingsButton::OpenUpgrades,
+                    ))
+                    .with_children(|btn| {
+                        btn.spawn((
+                            Text::new("UPGRADES"),
+                            TextFont {
+                                font_size: FontSize::Px(13.0),
+                                ..default()
+                            },
+                            TextColor(Color::WHITE),
+                        ));
+                    });
+
                     // settings toggle button
                     tb.spawn((
                         Button,

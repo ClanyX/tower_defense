@@ -27,6 +27,7 @@ fn main() {
         .init_state::<AppState>()
         .insert_resource(GameSettings::default())
         .insert_resource(ShowInGameSettings::default())
+        .insert_resource(ShowUpgrade::default())
         .insert_resource(KillCount(0))
         // Startup launcher setup / cleanup
         .add_systems(OnEnter(AppState::StartupMenu), spawn_launcher_ui)
