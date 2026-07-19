@@ -18,7 +18,7 @@ pub struct KillCountText;
 pub struct KillCount(pub u32);
 
 #[derive(Component)]
-pub struct CointCountText;
+pub struct CoinCountText;
 
 #[derive(Resource)]
 pub struct CoinCount(pub u32);
@@ -44,8 +44,9 @@ pub fn spawn_game(
 ) {
     time.unpause();
 
-    // Reset/insert the kill count resource on game start
+    // Reset/insert the kill/coin count resources on game start
     commands.insert_resource(KillCount(0));
+    commands.insert_resource(CoinCount(0));
 
     let window = match q_window.single() {
         Ok(w) => w,
@@ -53,12 +54,12 @@ pub fn spawn_game(
     };
 
     let window_width = window.width();
-    let window_height = &window.height();
+    let window_height = window.height();
 
     //instance of the player
     let player: Player = Player::new(&window_width);
     //instance of the tower
-    let tower: Tower = Tower::new(&window_width, window_height);
+    let tower: Tower = Tower::new(&window_width, &window_height);
 
     // Camera to render the UI
     commands.spawn((Camera2d, CleanupGame));
@@ -120,7 +121,7 @@ pub fn spawn_game(
                             ..default()
                         },
                         TextColor(Color::srgb(0.9, 0.9, 0.95)),
-                        CointCountText,
+                        CoinCountText,
                     ));
 
                     // upgrade toggle button
@@ -413,7 +414,7 @@ pub fn update_kill_count_text(
 // System to update COINS text in the HUD dynamically
 pub fn update_coin_count_text(
     coin_count: Res<CoinCount>,
-    mut q_text: Query<&mut Text, With<CointCountText>>,
+    mut q_text: Query<&mut Text, With<CoinCountText>>,
 ) {
     if coin_count.is_changed() {
         for mut text in &mut q_text {

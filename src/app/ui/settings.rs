@@ -43,7 +43,7 @@ pub struct CleanupLauncher;
 #[derive(Resource, Default)]
 pub struct ShowInGameSettings(pub bool);
 
-// REsource to track whether the upgrade menu us currently shown
+// Resource to track whether the upgrade menu us currently shown
 #[derive(Resource, Default)]
 pub struct ShowUpgrade(pub bool);
 
