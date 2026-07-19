@@ -7,18 +7,20 @@ pub struct Player {
     pub y: f32,
     pub size: u32,
     pub reload: Timer,
+    pub damage: u32,
 }
 
 impl Player {
-    pub fn new(window_width: &f32, _window_height: &f32) -> Player {
+    pub fn new(window_width: &f32) -> Player {
         let mut timer = Timer::from_seconds(1.0, TimerMode::Once);
         timer.set_elapsed(std::time::Duration::from_secs(1));
 
         Player {
-            x: (window_width / 2.0) - (window_width * 0.1),
+            x: (window_width / 2.0) - (160.0 / 2.0),
             y: 0.0,
             size: 50,
             reload: timer,
+            damage: 2,
         }
     }
 
@@ -30,7 +32,7 @@ impl Player {
                 ..default()
             },
             CleanupGame,
-            Transform::from_xyz(player.x, player.y, 0.0),
+            Transform::from_xyz(player.x, player.y, 1.0),
             player,
         ));
     }
