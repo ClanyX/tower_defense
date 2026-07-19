@@ -17,6 +17,12 @@ pub struct KillCountText;
 #[derive(Resource)]
 pub struct KillCount(pub u32);
 
+#[derive(Component)]
+pub struct CointCountText;
+
+#[derive(Resource)]
+pub struct CoinCount(pub u32);
+
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
@@ -95,7 +101,7 @@ pub fn spawn_game(
                         TextColor(Color::srgb(0.9, 0.9, 0.95)),
                     ));
 
-                    // KILL COUNT TEXT IN THE MIDDLE
+                    // KILL COUNT TEXT
                     tb.spawn((
                         Text::new("KILLS: 0"),
                         TextFont {
@@ -104,6 +110,17 @@ pub fn spawn_game(
                         },
                         TextColor(Color::srgb(0.9, 0.9, 0.95)),
                         KillCountText,
+                    ));
+
+                    // COINS COUNT TEXT
+                    tb.spawn((
+                        Text::new("COINS: 0"),
+                        TextFont {
+                            font_size: FontSize::Px(18.0),
+                            ..default()
+                        },
+                        TextColor(Color::srgb(0.9, 0.9, 0.95)),
+                        CointCountText,
                     ));
 
                     // upgrade toggle button
@@ -315,6 +332,7 @@ pub fn player_shooting(
     mut q_player: Query<(&Transform, &mut Player)>,
     mut q_enemies: Query<(Entity, &Transform, &mut Enemy)>,
     mut kill_count: ResMut<KillCount>,
+    mut coin_count: ResMut<CoinCount>,
 ) {
     // Only shoot if the player is spawned
     let (player_transform, mut player) = match q_player.single_mut() {
@@ -357,6 +375,7 @@ pub fn player_shooting(
                 if enemy.hp <= 0 {
                     commands.entity(enemy_entity).despawn();
                     kill_count.0 += 1;
+                    coin_count.0 += enemy.reward;
                 }
             }
             // Reset reload timer for the next shot
@@ -387,6 +406,18 @@ pub fn update_kill_count_text(
     if kill_count.is_changed() {
         for mut text in &mut q_text {
             text.0 = format!("KILLS: {}", kill_count.0);
+        }
+    }
+}
+
+// System to update COINS text in the HUD dynamically
+pub fn update_coin_count_text(
+    coin_count: Res<CoinCount>,
+    mut q_text: Query<&mut Text, With<CointCountText>>,
+) {
+    if coin_count.is_changed() {
+        for mut text in &mut q_text {
+            text.0 = format!("COINS: {}", coin_count.0);
         }
     }
 }

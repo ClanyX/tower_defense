@@ -11,6 +11,7 @@ pub struct Enemy {
     pub hp: i32,
     pub direction: Vec2,
     pub speed: f32,
+    pub reward: u32,
 }
 
 #[derive(Component)]
@@ -39,6 +40,7 @@ impl Enemy {
             hp: 5,
             direction: Vec2::new(1.0, 0.0),
             speed: 100.0,
+            reward: 2,
         }
     }
 
