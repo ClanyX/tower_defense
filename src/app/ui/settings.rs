@@ -1,4 +1,5 @@
 use crate::AppState;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::{MonitorSelection, PrimaryWindow, WindowMode};
 
@@ -504,25 +505,30 @@ pub fn update_launcher_button_colors(
 type ButtonInteractionComponents = (&'static Interaction, &'static SettingsButton);
 type ButtonInteractionFilter = (Changed<Interaction>, With<Button>);
 
+#[derive(SystemParam)]
+pub struct ButtonClickParams<'w, 's> {
+    pub settings: ResMut<'w, GameSettings>,
+    pub next_state: ResMut<'w, NextState<AppState>>,
+    pub q_window: Query<'w, 's, &'static mut Window, With<PrimaryWindow>>,
+    pub show_in_game_settings: ResMut<'w, ShowInGameSettings>,
+    pub show_upgrade_menu: ResMut<'w, ShowUpgrade>,
+    pub app_exit_events: MessageWriter<'w, AppExit>,
+    pub current_state: Res<'w, State<AppState>>,
+}
+
 // System to handle mouse click inputs on UI buttons
 pub fn handle_button_clicks(
     mut interaction_query: Query<ButtonInteractionComponents, ButtonInteractionFilter>,
-    mut settings: ResMut<GameSettings>,
-    mut next_state: ResMut<NextState<AppState>>,
-    mut q_window: Query<&mut Window, With<PrimaryWindow>>,
-    mut show_in_game_settings: ResMut<ShowInGameSettings>,
-    mut show_upgrade_menu: ResMut<ShowUpgrade>,
-    mut app_exit_events: MessageWriter<AppExit>,
-    current_state: Res<State<AppState>>,
+    mut params: ButtonClickParams,
 ) {
     for (interaction, button_action) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
             match button_action {
                 SettingsButton::FullscreenToggle(val) => {
-                    settings.fullscreen = *val;
+                    params.settings.fullscreen = *val;
                     // If in-game, apply settings immediately and restart to launcher menu
-                    if current_state.get() == &AppState::InGame {
-                        if let Ok(mut window) = q_window.single_mut() {
+                    if params.current_state.get() == &AppState::InGame {
+                        if let Ok(mut window) = params.q_window.single_mut() {
                             window.mode = if *val {
                                 WindowMode::BorderlessFullscreen(MonitorSelection::Primary)
                             } else {
@@ -530,56 +536,56 @@ pub fn handle_button_clicks(
                             };
                             window.title = "Game Launcher".to_string();
                         }
-                        show_in_game_settings.0 = false;
-                        next_state.set(AppState::StartupMenu);
+                        params.show_in_game_settings.0 = false;
+                        params.next_state.set(AppState::StartupMenu);
                     }
                 }
                 SettingsButton::ResolutionSelect(res) => {
-                    settings.resolution = *res;
+                    params.settings.resolution = *res;
                     // If in-game, apply settings immediately and restart to launcher menu
-                    if current_state.get() == &AppState::InGame {
-                        if let Ok(mut window) = q_window.single_mut() {
+                    if params.current_state.get() == &AppState::InGame {
+                        if let Ok(mut window) = params.q_window.single_mut() {
                             let (w, h) = res.dimensions();
                             window.resolution.set(w, h);
                             window.title = "Game Launcher".to_string();
                         }
-                        show_in_game_settings.0 = false;
-                        next_state.set(AppState::StartupMenu);
+                        params.show_in_game_settings.0 = false;
+                        params.next_state.set(AppState::StartupMenu);
                     }
                 }
                 SettingsButton::StartGame => {
                     // Apply selected settings when starting
-                    if let Ok(mut window) = q_window.single_mut() {
-                        let (w, h) = settings.resolution.dimensions();
+                    if let Ok(mut window) = params.q_window.single_mut() {
+                        let (w, h) = params.settings.resolution.dimensions();
                         window.resolution.set(w, h);
-                        window.mode = if settings.fullscreen {
+                        window.mode = if params.settings.fullscreen {
                             WindowMode::BorderlessFullscreen(MonitorSelection::Primary)
                         } else {
                             WindowMode::Windowed
                         };
                         window.title = "Tower Defense".to_string();
                     }
-                    next_state.set(AppState::InGame);
+                    params.next_state.set(AppState::InGame);
                 }
                 SettingsButton::ExitGame => {
-                    app_exit_events.write(AppExit::Success);
+                    params.app_exit_events.write(AppExit::Success);
                 }
                 SettingsButton::OpenSettings => {
-                    show_in_game_settings.0 = true;
+                    params.show_in_game_settings.0 = true;
                 }
                 SettingsButton::BackToGame => {
-                    show_in_game_settings.0 = false;
+                    params.show_in_game_settings.0 = false;
                 }
                 SettingsButton::OpenUpgrades => {
-                    show_upgrade_menu.0 = true;
+                    params.show_upgrade_menu.0 = true;
                 }
                 SettingsButton::ReturnToMenu => {
                     // Save the settings, but reset the window
-                    if let Ok(mut window) = q_window.single_mut() {
+                    if let Ok(mut window) = params.q_window.single_mut() {
                         window.title = "Game Launcher".to_string();
                     }
-                    show_in_game_settings.0 = false;
-                    next_state.set(AppState::StartupMenu);
+                    params.show_in_game_settings.0 = false;
+                    params.next_state.set(AppState::StartupMenu);
                 }
             }
         }
