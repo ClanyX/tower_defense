@@ -1,3 +1,5 @@
+use crate::app::game::logic::CoinCount;
+use crate::app::game::player::Player;
 use bevy::prelude::*;
 
 // Resource to track whether the upgrade menu is currently shown
@@ -8,10 +10,19 @@ pub struct ShowUpgrade(pub bool);
 #[derive(Component)]
 pub struct InGameUpgradesModal;
 
+// Markers for dynamic text fields in upgrade menu
+#[derive(Component)]
+pub struct DamageText;
+
+#[derive(Component)]
+pub struct ReloadText;
+
 // Interactive upgrade buttons enum
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum UpgradeButton {
     OpenUpgrades,
+    UpgradeDamage,
+    UpgradeReloadSpeed,
     Close,
 }
 
@@ -31,6 +42,8 @@ type UpgradeColorFilter = (Changed<Interaction>, With<Button>);
 pub fn handle_upgrade_button_clicks(
     mut interaction_query: Query<UpgradeInteractionComponents, UpgradeInteractionFilter>,
     mut show_upgrade: ResMut<ShowUpgrade>,
+    mut q_player: Query<&mut Player>,
+    mut coin_count: ResMut<CoinCount>,
 ) {
     for (interaction, button_action) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
@@ -41,6 +54,53 @@ pub fn handle_upgrade_button_clicks(
                 UpgradeButton::Close => {
                     show_upgrade.0 = false;
                 }
+                UpgradeButton::UpgradeDamage => {
+                    const DAMAGE_UPGRADE_COST: u32 = 5;
+                    if coin_count.0 >= DAMAGE_UPGRADE_COST
+                        && let Ok(mut player) = q_player.single_mut()
+                    {
+                        coin_count.0 -= DAMAGE_UPGRADE_COST;
+                        player.damage += 1;
+                    }
+                }
+                UpgradeButton::UpgradeReloadSpeed => {
+                    const RELOAD_UPGRADE_COST: u32 = 5;
+                    if coin_count.0 >= RELOAD_UPGRADE_COST
+                        && let Ok(mut player) = q_player.single_mut()
+                    {
+                        let current_duration = player.reload.duration().as_secs_f32();
+                        if current_duration > 0.15 {
+                            coin_count.0 -= RELOAD_UPGRADE_COST;
+                            let new_duration = (current_duration - 0.1).max(0.1);
+                            player
+                                .reload
+                                .set_duration(std::time::Duration::from_secs_f32(new_duration));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// System to update dynamic text in the upgrade menu
+pub fn update_upgrade_menu_text(
+    q_player: Query<&Player>,
+    mut q_damage_text: Query<&mut Text, (With<DamageText>, Without<ReloadText>)>,
+    mut q_reload_text: Query<&mut Text, (With<ReloadText>, Without<DamageText>)>,
+) {
+    if let Ok(player) = q_player.single() {
+        for mut text in &mut q_damage_text {
+            let val = format!("DAMAGE: {}", player.damage);
+            if text.0 != val {
+                text.0 = val;
+            }
+        }
+        for mut text in &mut q_reload_text {
+            let secs = player.reload.duration().as_secs_f32();
+            let val = format!("RELOAD: {:.1}s", secs);
+            if text.0 != val {
+                text.0 = val;
             }
         }
     }
@@ -85,6 +145,23 @@ pub fn update_upgrade_button_colors(
                     Color::srgb(0.18, 0.18, 0.22),
                     Color::srgb(0.3, 0.3, 0.35),
                     Color::srgb(0.8, 0.8, 0.8),
+                ),
+            },
+            UpgradeButton::UpgradeDamage | UpgradeButton::UpgradeReloadSpeed => match interaction {
+                Interaction::Pressed => (
+                    Color::srgb(0.15, 0.45, 0.85),
+                    Color::srgb(0.3, 0.7, 1.0),
+                    Color::srgb(1.0, 1.0, 1.0),
+                ),
+                Interaction::Hovered => (
+                    Color::srgb(0.2, 0.5, 0.9),
+                    Color::srgb(0.4, 0.8, 1.0),
+                    Color::srgb(1.0, 1.0, 1.0),
+                ),
+                Interaction::None => (
+                    Color::srgb(0.1, 0.4, 0.8),
+                    Color::srgb(0.2, 0.6, 0.9),
+                    Color::srgb(1.0, 1.0, 1.0),
                 ),
             },
         };
@@ -164,40 +241,140 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                     ));
 
                     // Reusable container panel for upgrade items
-                    modal.spawn((Node {
-                        flex_direction: FlexDirection::Column,
-                        align_items: AlignItems::Center,
-                        row_gap: Val::Px(12.0),
-                        ..default()
-                    },));
+                    modal
+                        .spawn((Node {
+                            flex_direction: FlexDirection::Column,
+                            align_items: AlignItems::Center,
+                            row_gap: Val::Px(16.0),
+                            width: Val::Percent(100.0),
+                            ..default()
+                        },))
+                        .with_children(|body| {
+                            // UPGRADE 1: DAMAGE
+                            body.spawn((Node {
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::SpaceBetween,
+                                align_items: AlignItems::Center,
+                                width: Val::Percent(100.0),
+                                padding: UiRect::horizontal(Val::Px(10.0)),
+                                ..default()
+                            },))
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Text::new("DAMAGE: 2"),
+                                        TextFont {
+                                            font_size: FontSize::Px(16.0),
+                                            ..default()
+                                        },
+                                        TextColor(Color::srgb(0.9, 0.9, 0.95)),
+                                        DamageText,
+                                    ));
+
+                                    row.spawn((
+                                        Button,
+                                        Node {
+                                            width: Val::Px(160.0),
+                                            height: Val::Px(36.0),
+                                            border: UiRect::all(Val::Px(2.0)),
+                                            justify_content: JustifyContent::Center,
+                                            align_items: AlignItems::Center,
+                                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                                            ..default()
+                                        },
+                                        Interaction::None,
+                                        BackgroundColor(Color::srgb(0.1, 0.4, 0.8)),
+                                        BorderColor::all(Color::srgb(0.2, 0.6, 0.9)),
+                                        UpgradeButton::UpgradeDamage,
+                                    ))
+                                    .with_children(|btn| {
+                                        btn.spawn((
+                                            Text::new("+1 (5 COINS)"),
+                                            TextFont {
+                                                font_size: FontSize::Px(13.0),
+                                                ..default()
+                                            },
+                                            TextColor(Color::WHITE),
+                                        ));
+                                    });
+                                });
+
+                            // UPGRADE 2: RELOAD SPEED
+                            body.spawn((Node {
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::SpaceBetween,
+                                align_items: AlignItems::Center,
+                                width: Val::Percent(100.0),
+                                padding: UiRect::horizontal(Val::Px(10.0)),
+                                ..default()
+                            },))
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Text::new("RELOAD: 1.0s"),
+                                        TextFont {
+                                            font_size: FontSize::Px(16.0),
+                                            ..default()
+                                        },
+                                        TextColor(Color::srgb(0.9, 0.9, 0.95)),
+                                        ReloadText,
+                                    ));
+
+                                    row.spawn((
+                                        Button,
+                                        Node {
+                                            width: Val::Px(160.0),
+                                            height: Val::Px(36.0),
+                                            border: UiRect::all(Val::Px(2.0)),
+                                            justify_content: JustifyContent::Center,
+                                            align_items: AlignItems::Center,
+                                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                                            ..default()
+                                        },
+                                        Interaction::None,
+                                        BackgroundColor(Color::srgb(0.1, 0.4, 0.8)),
+                                        BorderColor::all(Color::srgb(0.2, 0.6, 0.9)),
+                                        UpgradeButton::UpgradeReloadSpeed,
+                                    ))
+                                    .with_children(|btn| {
+                                        btn.spawn((
+                                            Text::new("-0.1s (5 COINS)"),
+                                            TextFont {
+                                                font_size: FontSize::Px(13.0),
+                                                ..default()
+                                            },
+                                            TextColor(Color::WHITE),
+                                        ));
+                                    });
+                                });
+                        });
 
                     // Close Button
-                    modal.spawn((
-                        Button,
-                        Node {
-                            width: Val::Px(220.0),
-                            height: Val::Px(42.0),
-                            border: UiRect::all(Val::Px(2.0)),
-                            justify_content: JustifyContent::Center,
-                            align_items: AlignItems::Center,
-                            border_radius: BorderRadius::all(Val::Px(6.0)),
-                            ..default()
-                        },
-                        Interaction::None,
-                        BackgroundColor(Color::srgb(0.4, 0.15, 0.15)),
-                        BorderColor::all(Color::srgb(0.6, 0.2, 0.2)),
-                        UpgradeButton::Close,
-                    ))
-                    .with_children(|btn| {
-                        btn.spawn((
-                            Text::new("CLOSE"),
-                            TextFont {
-                                font_size: FontSize::Px(14.0),
+                    modal
+                        .spawn((
+                            Button,
+                            Node {
+                                width: Val::Px(220.0),
+                                height: Val::Px(42.0),
+                                border: UiRect::all(Val::Px(2.0)),
+                                justify_content: JustifyContent::Center,
+                                align_items: AlignItems::Center,
+                                border_radius: BorderRadius::all(Val::Px(6.0)),
                                 ..default()
                             },
-                            TextColor(Color::srgb(0.85, 0.85, 0.85)),
-                        ));
-                    });
+                            Interaction::None,
+                            BackgroundColor(Color::srgb(0.4, 0.15, 0.15)),
+                            BorderColor::all(Color::srgb(0.6, 0.2, 0.2)),
+                            UpgradeButton::Close,
+                        ))
+                        .with_children(|btn| {
+                            btn.spawn((
+                                Text::new("CLOSE"),
+                                TextFont {
+                                    font_size: FontSize::Px(14.0),
+                                    ..default()
+                                },
+                                TextColor(Color::srgb(0.85, 0.85, 0.85)),
+                            ));
+                        });
                 });
         });
 }

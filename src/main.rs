@@ -60,6 +60,7 @@ fn main() {
                 update_kill_count_text,
                 update_coin_count_text,
                 update_tower_hp_text,
+                update_upgrade_menu_text,
                 check_game_over,
             )
                 .run_if(in_state(AppState::InGame)),
