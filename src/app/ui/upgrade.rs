@@ -2,6 +2,22 @@ use crate::app::game::logic::CoinCount;
 use crate::app::game::player::Player;
 use bevy::prelude::*;
 
+// Resource to track dynamic upgrade costs
+#[derive(Resource)]
+pub struct UpgradeCosts {
+    pub damage_cost: u32,
+    pub reload_cost: u32,
+}
+
+impl Default for UpgradeCosts {
+    fn default() -> Self {
+        Self {
+            damage_cost: 5,
+            reload_cost: 5,
+        }
+    }
+}
+
 // Resource to track whether the upgrade menu is currently shown
 #[derive(Resource, Default)]
 pub struct ShowUpgrade(pub bool);
@@ -16,6 +32,12 @@ pub struct DamageText;
 
 #[derive(Component)]
 pub struct ReloadText;
+
+#[derive(Component)]
+pub struct DamageButtonText;
+
+#[derive(Component)]
+pub struct ReloadButtonText;
 
 // Interactive upgrade buttons enum
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
@@ -44,6 +66,7 @@ pub fn handle_upgrade_button_clicks(
     mut show_upgrade: ResMut<ShowUpgrade>,
     mut q_player: Query<&mut Player>,
     mut coin_count: ResMut<CoinCount>,
+    mut upgrade_costs: ResMut<UpgradeCosts>,
 ) {
     for (interaction, button_action) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
@@ -55,26 +78,26 @@ pub fn handle_upgrade_button_clicks(
                     show_upgrade.0 = false;
                 }
                 UpgradeButton::UpgradeDamage => {
-                    const DAMAGE_UPGRADE_COST: u32 = 5;
-                    if coin_count.0 >= DAMAGE_UPGRADE_COST
+                    if coin_count.0 >= upgrade_costs.damage_cost
                         && let Ok(mut player) = q_player.single_mut()
                     {
-                        coin_count.0 -= DAMAGE_UPGRADE_COST;
+                        coin_count.0 -= upgrade_costs.damage_cost;
                         player.damage += 1;
+                        upgrade_costs.damage_cost += 2;
                     }
                 }
                 UpgradeButton::UpgradeReloadSpeed => {
-                    const RELOAD_UPGRADE_COST: u32 = 5;
-                    if coin_count.0 >= RELOAD_UPGRADE_COST
+                    if coin_count.0 >= upgrade_costs.reload_cost
                         && let Ok(mut player) = q_player.single_mut()
                     {
                         let current_duration = player.reload.duration().as_secs_f32();
                         if current_duration > 0.15 {
-                            coin_count.0 -= RELOAD_UPGRADE_COST;
+                            coin_count.0 -= upgrade_costs.reload_cost;
                             let new_duration = (current_duration - 0.1).max(0.1);
                             player
                                 .reload
                                 .set_duration(std::time::Duration::from_secs_f32(new_duration));
+                            upgrade_costs.reload_cost += 2;
                         }
                     }
                 }
@@ -83,11 +106,28 @@ pub fn handle_upgrade_button_clicks(
     }
 }
 
+type DamageBtnTextFilter = (
+    With<DamageButtonText>,
+    Without<ReloadButtonText>,
+    Without<DamageText>,
+    Without<ReloadText>,
+);
+
+type ReloadBtnTextFilter = (
+    With<ReloadButtonText>,
+    Without<DamageButtonText>,
+    Without<DamageText>,
+    Without<ReloadText>,
+);
+
 // System to update dynamic text in the upgrade menu
 pub fn update_upgrade_menu_text(
+    upgrade_costs: Res<UpgradeCosts>,
     q_player: Query<&Player>,
     mut q_damage_text: Query<&mut Text, (With<DamageText>, Without<ReloadText>)>,
     mut q_reload_text: Query<&mut Text, (With<ReloadText>, Without<DamageText>)>,
+    mut q_damage_btn_text: Query<&mut Text, DamageBtnTextFilter>,
+    mut q_reload_btn_text: Query<&mut Text, ReloadBtnTextFilter>,
 ) {
     if let Ok(player) = q_player.single() {
         for mut text in &mut q_damage_text {
@@ -99,6 +139,20 @@ pub fn update_upgrade_menu_text(
         for mut text in &mut q_reload_text {
             let secs = player.reload.duration().as_secs_f32();
             let val = format!("RELOAD: {:.1}s", secs);
+            if text.0 != val {
+                text.0 = val;
+            }
+        }
+    }
+    if upgrade_costs.is_changed() {
+        for mut text in &mut q_damage_btn_text {
+            let val = format!("+1 ({} COINS)", upgrade_costs.damage_cost);
+            if text.0 != val {
+                text.0 = val;
+            }
+        }
+        for mut text in &mut q_reload_btn_text {
+            let val = format!("-0.1s ({} COINS)", upgrade_costs.reload_cost);
             if text.0 != val {
                 text.0 = val;
             }
@@ -294,6 +348,7 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                                                 ..default()
                                             },
                                             TextColor(Color::WHITE),
+                                            DamageButtonText,
                                         ));
                                     });
                                 });
@@ -342,6 +397,7 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                                                 ..default()
                                             },
                                             TextColor(Color::WHITE),
+                                            ReloadButtonText,
                                         ));
                                     });
                                 });

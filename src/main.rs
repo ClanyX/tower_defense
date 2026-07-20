@@ -29,6 +29,7 @@ fn main() {
         .insert_resource(GameSettings::default())
         .insert_resource(ShowInGameSettings::default())
         .insert_resource(ShowUpgrade::default())
+        .insert_resource(UpgradeCosts::default())
         .insert_resource(KillCount(0))
         .insert_resource(CoinCount(0))
         // Startup launcher setup / cleanup

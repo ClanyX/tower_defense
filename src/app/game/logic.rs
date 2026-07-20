@@ -48,6 +48,7 @@ pub fn spawn_game(
     // Reset/insert the kill/coin count resources on game start
     commands.insert_resource(KillCount(0));
     commands.insert_resource(CoinCount(0));
+    commands.insert_resource(UpgradeCosts::default());
 
     let window = match q_window.single() {
         Ok(w) => w,
