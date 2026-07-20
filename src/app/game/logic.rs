@@ -3,6 +3,7 @@ use crate::app::game::enemy::*;
 use crate::app::game::player::*;
 use crate::app::game::tower::*;
 use crate::app::ui::settings::*;
+use crate::app::ui::upgrade::*;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
 use bevy::window::PrimaryWindow;
@@ -137,18 +138,18 @@ pub fn spawn_game(
                             ..default()
                         },
                         Interaction::None,
-                        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.0)),
-                        BorderColor::all(Color::srgba(0.0, 0.0, 0.0, 0.0)),
-                        SettingsButton::OpenUpgrades,
+                        BackgroundColor(Color::srgb(0.18, 0.18, 0.22)),
+                        BorderColor::all(Color::srgb(0.3, 0.3, 0.35)),
+                        UpgradeButton::OpenUpgrades,
                     ))
                     .with_children(|btn| {
                         btn.spawn((
-                            Text::new("UPGRADES"),
+                            Text::new("UPGRADE"),
                             TextFont {
                                 font_size: FontSize::Px(13.0),
                                 ..default()
                             },
-                            TextColor(Color::WHITE),
+                            TextColor(Color::srgb(0.8, 0.8, 0.8)),
                         ));
                     });
 
@@ -301,6 +302,9 @@ pub fn spawn_game(
                                 });
                         });
                 });
+
+            // UPGRADE OVERLAY MODAL (Hidden by default)
+            spawn_upgrade_modal(parent);
         });
 
     // SPAWN TOWER
@@ -316,13 +320,21 @@ pub fn despawn_game(mut commands: Commands, query: Query<Entity, With<CleanupGam
     }
 }
 
-// In-game key inputs (Escape to toggle settings)
+// In-game key inputs (U for upgrades, Escape for settings/close)
 pub fn in_game_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut show_settings: ResMut<ShowInGameSettings>,
+    mut show_upgrade: ResMut<ShowUpgrade>,
 ) {
+    if keyboard_input.just_pressed(KeyCode::KeyU) {
+        show_upgrade.0 = !show_upgrade.0;
+    }
     if keyboard_input.just_pressed(KeyCode::Escape) {
-        show_settings.0 = !show_settings.0;
+        if show_upgrade.0 {
+            show_upgrade.0 = false;
+        } else {
+            show_settings.0 = !show_settings.0;
+        }
     }
 }
 
