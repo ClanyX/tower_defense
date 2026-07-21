@@ -43,10 +43,6 @@ pub struct CleanupLauncher;
 #[derive(Resource, Default)]
 pub struct ShowInGameSettings(pub bool);
 
-// Resource to track whether the upgrade menu us currently shown
-#[derive(Resource, Default)]
-pub struct ShowUpgrade(pub bool);
-
 // Interactive buttons enum
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
 pub enum SettingsButton {
@@ -55,7 +51,6 @@ pub enum SettingsButton {
     StartGame,
     ExitGame,
     OpenSettings,
-    OpenUpgrades,
     BackToGame,
     ReturnToMenu,
 }
@@ -511,7 +506,6 @@ pub struct ButtonClickParams<'w, 's> {
     pub next_state: ResMut<'w, NextState<AppState>>,
     pub q_window: Query<'w, 's, &'static mut Window, With<PrimaryWindow>>,
     pub show_in_game_settings: ResMut<'w, ShowInGameSettings>,
-    pub show_upgrade_menu: ResMut<'w, ShowUpgrade>,
     pub app_exit_events: MessageWriter<'w, AppExit>,
     pub current_state: Res<'w, State<AppState>>,
 }
@@ -575,9 +569,6 @@ pub fn handle_button_clicks(
                 }
                 SettingsButton::BackToGame => {
                     params.show_in_game_settings.0 = false;
-                }
-                SettingsButton::OpenUpgrades => {
-                    params.show_upgrade_menu.0 = true;
                 }
                 SettingsButton::ReturnToMenu => {
                     // Save the settings, but reset the window

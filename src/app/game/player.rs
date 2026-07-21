@@ -8,6 +8,7 @@ pub struct Player {
     pub size: u32,
     pub reload: Timer,
     pub damage: u32,
+    pub multishot: bool,
 }
 
 impl Player {
@@ -21,6 +22,7 @@ impl Player {
             size: 50,
             reload: timer,
             damage: 2,
+            multishot: false,
         }
     }
 

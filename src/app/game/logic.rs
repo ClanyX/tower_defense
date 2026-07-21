@@ -3,6 +3,7 @@ use crate::app::game::enemy::*;
 use crate::app::game::player::*;
 use crate::app::game::tower::*;
 use crate::app::ui::settings::*;
+use crate::app::ui::upgrade::*;
 use bevy::prelude::*;
 use bevy::time::common_conditions::on_timer;
 use bevy::window::PrimaryWindow;
@@ -47,6 +48,7 @@ pub fn spawn_game(
     // Reset/insert the kill/coin count resources on game start
     commands.insert_resource(KillCount(0));
     commands.insert_resource(CoinCount(0));
+    commands.insert_resource(UpgradeCosts::default());
 
     let window = match q_window.single() {
         Ok(w) => w,
@@ -137,18 +139,18 @@ pub fn spawn_game(
                             ..default()
                         },
                         Interaction::None,
-                        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.0)),
-                        BorderColor::all(Color::srgba(0.0, 0.0, 0.0, 0.0)),
-                        SettingsButton::OpenUpgrades,
+                        BackgroundColor(Color::srgb(0.18, 0.18, 0.22)),
+                        BorderColor::all(Color::srgb(0.3, 0.3, 0.35)),
+                        UpgradeButton::OpenUpgrades,
                     ))
                     .with_children(|btn| {
                         btn.spawn((
-                            Text::new("UPGRADES"),
+                            Text::new("UPGRADE"),
                             TextFont {
                                 font_size: FontSize::Px(13.0),
                                 ..default()
                             },
-                            TextColor(Color::WHITE),
+                            TextColor(Color::srgb(0.8, 0.8, 0.8)),
                         ));
                     });
 
@@ -301,6 +303,9 @@ pub fn spawn_game(
                                 });
                         });
                 });
+
+            // UPGRADE OVERLAY MODAL (Hidden by default)
+            spawn_upgrade_modal(parent);
         });
 
     // SPAWN TOWER
@@ -316,13 +321,21 @@ pub fn despawn_game(mut commands: Commands, query: Query<Entity, With<CleanupGam
     }
 }
 
-// In-game key inputs (Escape to toggle settings)
+// In-game key inputs (U for upgrades, Escape for settings/close)
 pub fn in_game_input(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut show_settings: ResMut<ShowInGameSettings>,
+    mut show_upgrade: ResMut<ShowUpgrade>,
 ) {
+    if keyboard_input.just_pressed(KeyCode::KeyU) {
+        show_upgrade.0 = !show_upgrade.0;
+    }
     if keyboard_input.just_pressed(KeyCode::Escape) {
-        show_settings.0 = !show_settings.0;
+        if show_upgrade.0 {
+            show_upgrade.0 = false;
+        } else {
+            show_settings.0 = !show_settings.0;
+        }
     }
 }
 
@@ -349,34 +362,51 @@ pub fn player_shooting(
     // Tick the player's reload timer
     player.reload.tick(time.delta());
 
-    // When the reload timer finishes, shoot the nearest enemy
+    // When the reload timer finishes, shoot nearest enemy (or 2 nearest enemies if multishot is active)
     if player.reload.is_finished() {
         let player_pos = player_transform.translation;
         let mut nearest_enemy: Option<(Entity, f32)> = None;
+        let mut second_nearest_enemy: Option<(Entity, f32)> = None;
 
         for (enemy_entity, enemy_transform, _) in &q_enemies {
             let distance = player_pos.distance(enemy_transform.translation);
             if let Some((_, min_dist)) = nearest_enemy {
                 if distance < min_dist {
+                    second_nearest_enemy = nearest_enemy;
                     nearest_enemy = Some((enemy_entity, distance));
+                } else if let Some((_, min_dist2)) = second_nearest_enemy {
+                    if distance < min_dist2 {
+                        second_nearest_enemy = Some((enemy_entity, distance));
+                    }
+                } else {
+                    second_nearest_enemy = Some((enemy_entity, distance));
                 }
             } else {
                 nearest_enemy = Some((enemy_entity, distance));
             }
         }
 
-        // Apply damage to the nearest enemy
-        if let Some((enemy_entity, _)) = nearest_enemy
-            && let Ok((_, _, mut enemy)) = q_enemies.get_mut(enemy_entity)
+        let mut targets = Vec::new();
+        if let Some((e1, _)) = nearest_enemy {
+            targets.push((e1, player.damage));
+        }
+        if player.multishot
+            && let Some((e2, _)) = second_nearest_enemy
         {
-            if enemy.hp > 0 {
-                //TODO: change value depend on the player damage
-                enemy.hp -= player.damage as i32;
-                // If enemy dies, despawn it (Bevy 0.19 automatically handles hierarchy cleanup)
-                if enemy.hp <= 0 {
-                    commands.entity(enemy_entity).despawn();
-                    kill_count.0 += 1;
-                    coin_count.0 += enemy.reward;
+            targets.push((e2, player.damage / 2));
+        }
+
+        if !targets.is_empty() {
+            for (enemy_entity, damage) in targets {
+                if let Ok((_, _, mut enemy)) = q_enemies.get_mut(enemy_entity)
+                    && enemy.hp > 0
+                {
+                    enemy.hp -= damage as i32;
+                    if enemy.hp <= 0 {
+                        commands.entity(enemy_entity).despawn();
+                        kill_count.0 += 1;
+                        coin_count.0 += enemy.reward;
+                    }
                 }
             }
             // Reset reload timer for the next shot
