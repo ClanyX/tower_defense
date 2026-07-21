@@ -390,22 +390,22 @@ pub fn player_shooting(
         if let Some((e1, _)) = nearest_enemy {
             targets.push((e1, player.damage));
         }
-        if player.multishot {
-            if let Some((e2, _)) = second_nearest_enemy {
-                targets.push((e2, player.damage / 2));
-            }
+        if player.multishot
+            && let Some((e2, _)) = second_nearest_enemy
+        {
+            targets.push((e2, player.damage / 2));
         }
 
         if !targets.is_empty() {
             for (enemy_entity, damage) in targets {
-                if let Ok((_, _, mut enemy)) = q_enemies.get_mut(enemy_entity) {
-                    if enemy.hp > 0 {
-                        enemy.hp -= damage as i32;
-                        if enemy.hp <= 0 {
-                            commands.entity(enemy_entity).despawn();
-                            kill_count.0 += 1;
-                            coin_count.0 += enemy.reward;
-                        }
+                if let Ok((_, _, mut enemy)) = q_enemies.get_mut(enemy_entity)
+                    && enemy.hp > 0
+                {
+                    enemy.hp -= damage as i32;
+                    if enemy.hp <= 0 {
+                        commands.entity(enemy_entity).despawn();
+                        kill_count.0 += 1;
+                        coin_count.0 += enemy.reward;
                     }
                 }
             }

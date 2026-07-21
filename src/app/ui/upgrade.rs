@@ -113,7 +113,7 @@ pub fn handle_upgrade_button_clicks(
                 UpgradeButton::AbilityMultishot => {
                     if coin_count.0 >= upgrade_costs.multishot_cost
                         && let Ok(mut player) = q_player.single_mut()
-                        && player.multishot == false
+                        && !player.multishot
                     {
                         coin_count.0 -= upgrade_costs.multishot_cost;
                         player.multishot = true;
@@ -173,8 +173,8 @@ pub fn update_upgrade_menu_text(
             }
         }
         for mut text in &mut q_multishot_btn_text {
-            let val = format!("MultiShot is active");
-            if text.0 != val && player.multishot == true {
+            let val = "MultiShot is active".to_string();
+            if text.0 != val && player.multishot {
                 text.0 = val;
             }
         }
