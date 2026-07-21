@@ -7,6 +7,7 @@ use bevy::prelude::*;
 pub struct UpgradeCosts {
     pub damage_cost: u32,
     pub reload_cost: u32,
+    pub multishot_cost: u32,
 }
 
 impl Default for UpgradeCosts {
@@ -14,6 +15,7 @@ impl Default for UpgradeCosts {
         Self {
             damage_cost: 5,
             reload_cost: 5,
+            multishot_cost: 20,
         }
     }
 }
@@ -34,10 +36,16 @@ pub struct DamageText;
 pub struct ReloadText;
 
 #[derive(Component)]
+pub struct MultishotText;
+
+#[derive(Component)]
 pub struct DamageButtonText;
 
 #[derive(Component)]
 pub struct ReloadButtonText;
+
+#[derive(Component)]
+pub struct MultishotButtonText;
 
 // Interactive upgrade buttons enum
 #[derive(Component, Clone, Copy, PartialEq, Eq, Debug)]
@@ -45,6 +53,7 @@ pub enum UpgradeButton {
     OpenUpgrades,
     UpgradeDamage,
     UpgradeReloadSpeed,
+    AbilityMultishot,
     Close,
 }
 
@@ -99,6 +108,15 @@ pub fn handle_upgrade_button_clicks(
                                 .set_duration(std::time::Duration::from_secs_f32(new_duration));
                             upgrade_costs.reload_cost += 2;
                         }
+                    }
+                }
+                UpgradeButton::AbilityMultishot => {
+                    if coin_count.0 >= upgrade_costs.multishot_cost
+                        && let Ok(mut player) = q_player.single_mut()
+                        && player.multishot == false
+                    {
+                        coin_count.0 -= upgrade_costs.multishot_cost;
+                        player.multishot = true;
                     }
                 }
             }
@@ -201,7 +219,9 @@ pub fn update_upgrade_button_colors(
                     Color::srgb(0.8, 0.8, 0.8),
                 ),
             },
-            UpgradeButton::UpgradeDamage | UpgradeButton::UpgradeReloadSpeed => match interaction {
+            UpgradeButton::UpgradeDamage
+            | UpgradeButton::UpgradeReloadSpeed
+            | UpgradeButton::AbilityMultishot => match interaction {
                 Interaction::Pressed => (
                     Color::srgb(0.15, 0.45, 0.85),
                     Color::srgb(0.3, 0.7, 1.0),
@@ -286,7 +306,7 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                 ))
                 .with_children(|modal| {
                     modal.spawn((
-                        Text::new("UPGRADES"),
+                        Text::new("UPGRADES & ABILITY"),
                         TextFont {
                             font_size: FontSize::Px(26.0),
                             ..default()
@@ -398,6 +418,54 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                                             },
                                             TextColor(Color::WHITE),
                                             ReloadButtonText,
+                                        ));
+                                    });
+                                });
+                            // ABILITY 1: MULTISHOT
+                            body.spawn((Node {
+                                flex_direction: FlexDirection::Row,
+                                justify_content: JustifyContent::SpaceBetween,
+                                align_items: AlignItems::Center,
+                                width: Val::Percent(100.0),
+                                padding: UiRect::horizontal(Val::Px(10.0)),
+                                ..default()
+                            },))
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Text::new("MULTISHOT"),
+                                        TextFont {
+                                            font_size: FontSize::Px(16.0),
+                                            ..default()
+                                        },
+                                        TextColor(Color::srgb(0.9, 0.9, 0.95)),
+                                        MultishotText,
+                                    ));
+
+                                    row.spawn((
+                                        Button,
+                                        Node {
+                                            width: Val::Px(160.0),
+                                            height: Val::Px(36.0),
+                                            border: UiRect::all(Val::Px(2.0)),
+                                            justify_content: JustifyContent::Center,
+                                            align_items: AlignItems::Center,
+                                            border_radius: BorderRadius::all(Val::Px(6.0)),
+                                            ..default()
+                                        },
+                                        Interaction::None,
+                                        BackgroundColor(Color::srgb(0.1, 0.4, 0.8)),
+                                        BorderColor::all(Color::srgb(0.2, 0.6, 0.9)),
+                                        UpgradeButton::AbilityMultishot,
+                                    ))
+                                    .with_children(|btn| {
+                                        btn.spawn((
+                                            Text::new("Unlock MultiShot: 50 COINS"),
+                                            TextFont {
+                                                font_size: FontSize::Px(13.0),
+                                                ..default()
+                                            },
+                                            TextColor(Color::WHITE),
+                                            MultishotButtonText,
                                         ));
                                     });
                                 });

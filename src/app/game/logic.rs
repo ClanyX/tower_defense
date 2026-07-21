@@ -362,34 +362,51 @@ pub fn player_shooting(
     // Tick the player's reload timer
     player.reload.tick(time.delta());
 
-    // When the reload timer finishes, shoot the nearest enemy
+    // When the reload timer finishes, shoot nearest enemy (or 2 nearest enemies if multishot is active)
     if player.reload.is_finished() {
         let player_pos = player_transform.translation;
         let mut nearest_enemy: Option<(Entity, f32)> = None;
+        let mut second_nearest_enemy: Option<(Entity, f32)> = None;
 
         for (enemy_entity, enemy_transform, _) in &q_enemies {
             let distance = player_pos.distance(enemy_transform.translation);
             if let Some((_, min_dist)) = nearest_enemy {
                 if distance < min_dist {
+                    second_nearest_enemy = nearest_enemy;
                     nearest_enemy = Some((enemy_entity, distance));
+                } else if let Some((_, min_dist2)) = second_nearest_enemy {
+                    if distance < min_dist2 {
+                        second_nearest_enemy = Some((enemy_entity, distance));
+                    }
+                } else {
+                    second_nearest_enemy = Some((enemy_entity, distance));
                 }
             } else {
                 nearest_enemy = Some((enemy_entity, distance));
             }
         }
 
-        // Apply damage to the nearest enemy
-        if let Some((enemy_entity, _)) = nearest_enemy
-            && let Ok((_, _, mut enemy)) = q_enemies.get_mut(enemy_entity)
-        {
-            if enemy.hp > 0 {
-                //TODO: change value depend on the player damage
-                enemy.hp -= player.damage as i32;
-                // If enemy dies, despawn it (Bevy 0.19 automatically handles hierarchy cleanup)
-                if enemy.hp <= 0 {
-                    commands.entity(enemy_entity).despawn();
-                    kill_count.0 += 1;
-                    coin_count.0 += enemy.reward;
+        let mut targets = Vec::new();
+        if let Some((e1, _)) = nearest_enemy {
+            targets.push((e1, player.damage));
+        }
+        if player.multishot {
+            if let Some((e2, _)) = second_nearest_enemy {
+                targets.push((e2, player.damage / 2));
+            }
+        }
+
+        if !targets.is_empty() {
+            for (enemy_entity, damage) in targets {
+                if let Ok((_, _, mut enemy)) = q_enemies.get_mut(enemy_entity) {
+                    if enemy.hp > 0 {
+                        enemy.hp -= damage as i32;
+                        if enemy.hp <= 0 {
+                            commands.entity(enemy_entity).despawn();
+                            kill_count.0 += 1;
+                            coin_count.0 += enemy.reward;
+                        }
+                    }
                 }
             }
             // Reset reload timer for the next shot
