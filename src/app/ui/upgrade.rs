@@ -15,7 +15,7 @@ impl Default for UpgradeCosts {
         Self {
             damage_cost: 5,
             reload_cost: 5,
-            multishot_cost: 20,
+            multishot_cost: 50,
         }
     }
 }
@@ -127,12 +127,22 @@ pub fn handle_upgrade_button_clicks(
 type DamageBtnTextFilter = (
     With<DamageButtonText>,
     Without<ReloadButtonText>,
+    Without<MultishotButtonText>,
     Without<DamageText>,
     Without<ReloadText>,
 );
 
 type ReloadBtnTextFilter = (
     With<ReloadButtonText>,
+    Without<DamageButtonText>,
+    Without<MultishotButtonText>,
+    Without<DamageText>,
+    Without<ReloadText>,
+);
+
+type MultishotBtnTextFilter = (
+    With<MultishotButtonText>,
+    Without<ReloadButtonText>,
     Without<DamageButtonText>,
     Without<DamageText>,
     Without<ReloadText>,
@@ -144,6 +154,7 @@ pub fn update_upgrade_menu_text(
     q_player: Query<&Player>,
     mut q_damage_text: Query<&mut Text, (With<DamageText>, Without<ReloadText>)>,
     mut q_reload_text: Query<&mut Text, (With<ReloadText>, Without<DamageText>)>,
+    mut q_multishot_btn_text: Query<&mut Text, MultishotBtnTextFilter>,
     mut q_damage_btn_text: Query<&mut Text, DamageBtnTextFilter>,
     mut q_reload_btn_text: Query<&mut Text, ReloadBtnTextFilter>,
 ) {
@@ -158,6 +169,12 @@ pub fn update_upgrade_menu_text(
             let secs = player.reload.duration().as_secs_f32();
             let val = format!("RELOAD: {:.1}s", secs);
             if text.0 != val {
+                text.0 = val;
+            }
+        }
+        for mut text in &mut q_multishot_btn_text {
+            let val = format!("MultiShot is active");
+            if text.0 != val && player.multishot == true {
                 text.0 = val;
             }
         }
@@ -444,7 +461,7 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                                     row.spawn((
                                         Button,
                                         Node {
-                                            width: Val::Px(160.0),
+                                            width: Val::Px(220.0),
                                             height: Val::Px(36.0),
                                             border: UiRect::all(Val::Px(2.0)),
                                             justify_content: JustifyContent::Center,
