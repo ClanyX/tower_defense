@@ -1,4 +1,4 @@
-use crate::app::game::logic::CoinCount;
+use crate::app::game::logic::{CoinCount, KillCount};
 use crate::app::game::player::Player;
 use bevy::prelude::*;
 
@@ -13,10 +13,27 @@ pub struct UpgradeCosts {
 impl Default for UpgradeCosts {
     fn default() -> Self {
         Self {
-            damage_cost: 5,
-            reload_cost: 5,
-            multishot_cost: 50,
+            damage_cost: 2,
+            reload_cost: 2,
+            multishot_cost: 25,
         }
+    }
+}
+
+impl UpgradeCosts {
+    pub fn get_damage_cost(&self, score: u32) -> u32 {
+        let late_game_scaling = (score as f32 * 0.15).powi(2) as u32;
+        self.damage_cost + late_game_scaling + (score / 3)
+    }
+
+    pub fn get_reload_cost(&self, score: u32) -> u32 {
+        let late_game_scaling = (score as f32 * 0.15).powi(2) as u32;
+        self.reload_cost + late_game_scaling + (score / 3)
+    }
+
+    pub fn get_multishot_cost(&self, score: u32) -> u32 {
+        let late_game_scaling = (score as f32 * 0.2).powi(2) as u32;
+        self.multishot_cost + late_game_scaling + score
     }
 }
 
@@ -76,7 +93,9 @@ pub fn handle_upgrade_button_clicks(
     mut q_player: Query<&mut Player>,
     mut coin_count: ResMut<CoinCount>,
     mut upgrade_costs: ResMut<UpgradeCosts>,
+    kill_count: Res<KillCount>,
 ) {
+    let score = kill_count.0;
     for (interaction, button_action) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
             match button_action {
@@ -87,21 +106,23 @@ pub fn handle_upgrade_button_clicks(
                     show_upgrade.0 = false;
                 }
                 UpgradeButton::UpgradeDamage => {
-                    if coin_count.0 >= upgrade_costs.damage_cost
+                    let cost = upgrade_costs.get_damage_cost(score);
+                    if coin_count.0 >= cost
                         && let Ok(mut player) = q_player.single_mut()
                     {
-                        coin_count.0 -= upgrade_costs.damage_cost;
+                        coin_count.0 -= cost;
                         player.damage += 1;
                         upgrade_costs.damage_cost += 2;
                     }
                 }
                 UpgradeButton::UpgradeReloadSpeed => {
-                    if coin_count.0 >= upgrade_costs.reload_cost
+                    let cost = upgrade_costs.get_reload_cost(score);
+                    if coin_count.0 >= cost
                         && let Ok(mut player) = q_player.single_mut()
                     {
                         let current_duration = player.reload.duration().as_secs_f32();
                         if current_duration > 0.15 {
-                            coin_count.0 -= upgrade_costs.reload_cost;
+                            coin_count.0 -= cost;
                             let new_duration = (current_duration - 0.1).max(0.1);
                             player
                                 .reload
@@ -111,11 +132,12 @@ pub fn handle_upgrade_button_clicks(
                     }
                 }
                 UpgradeButton::AbilityMultishot => {
-                    if coin_count.0 >= upgrade_costs.multishot_cost
+                    let cost = upgrade_costs.get_multishot_cost(score);
+                    if coin_count.0 >= cost
                         && let Ok(mut player) = q_player.single_mut()
                         && !player.multishot
                     {
-                        coin_count.0 -= upgrade_costs.multishot_cost;
+                        coin_count.0 -= cost;
                         player.multishot = true;
                     }
                 }
@@ -151,6 +173,7 @@ type MultishotBtnTextFilter = (
 // System to update dynamic text in the upgrade menu
 pub fn update_upgrade_menu_text(
     upgrade_costs: Res<UpgradeCosts>,
+    kill_count: Res<KillCount>,
     q_player: Query<&Player>,
     mut q_damage_text: Query<&mut Text, (With<DamageText>, Without<ReloadText>)>,
     mut q_reload_text: Query<&mut Text, (With<ReloadText>, Without<DamageText>)>,
@@ -158,6 +181,7 @@ pub fn update_upgrade_menu_text(
     mut q_damage_btn_text: Query<&mut Text, DamageBtnTextFilter>,
     mut q_reload_btn_text: Query<&mut Text, ReloadBtnTextFilter>,
 ) {
+    let score = kill_count.0;
     if let Ok(player) = q_player.single() {
         for mut text in &mut q_damage_text {
             let val = format!("DAMAGE: {}", player.damage);
@@ -173,21 +197,31 @@ pub fn update_upgrade_menu_text(
             }
         }
         for mut text in &mut q_multishot_btn_text {
-            let val = "MultiShot is active".to_string();
-            if text.0 != val && player.multishot {
-                text.0 = val;
+            if player.multishot {
+                let val = "MultiShot is active".to_string();
+                if text.0 != val {
+                    text.0 = val;
+                }
+            } else {
+                let cost = upgrade_costs.get_multishot_cost(score);
+                let val = format!("Unlock MultiShot: {} COINS", cost);
+                if text.0 != val {
+                    text.0 = val;
+                }
             }
         }
     }
-    if upgrade_costs.is_changed() {
+    if upgrade_costs.is_changed() || kill_count.is_changed() {
         for mut text in &mut q_damage_btn_text {
-            let val = format!("+1 ({} COINS)", upgrade_costs.damage_cost);
+            let cost = upgrade_costs.get_damage_cost(score);
+            let val = format!("+1 ({} COINS)", cost);
             if text.0 != val {
                 text.0 = val;
             }
         }
         for mut text in &mut q_reload_btn_text {
-            let val = format!("-0.1s ({} COINS)", upgrade_costs.reload_cost);
+            let cost = upgrade_costs.get_reload_cost(score);
+            let val = format!("-0.1s ({} COINS)", cost);
             if text.0 != val {
                 text.0 = val;
             }
@@ -379,7 +413,7 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                                     ))
                                     .with_children(|btn| {
                                         btn.spawn((
-                                            Text::new("+1 (5 COINS)"),
+                                            Text::new("+1 (2 COINS)"),
                                             TextFont {
                                                 font_size: FontSize::Px(13.0),
                                                 ..default()
@@ -428,7 +462,7 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                                     ))
                                     .with_children(|btn| {
                                         btn.spawn((
-                                            Text::new("-0.1s (5 COINS)"),
+                                            Text::new("-0.1s (2 COINS)"),
                                             TextFont {
                                                 font_size: FontSize::Px(13.0),
                                                 ..default()
@@ -476,7 +510,7 @@ pub fn spawn_upgrade_modal(parent: &mut ChildSpawnerCommands) {
                                     ))
                                     .with_children(|btn| {
                                         btn.spawn((
-                                            Text::new("Unlock MultiShot: 50 COINS"),
+                                            Text::new("Unlock MultiShot: 25 COINS"),
                                             TextFont {
                                                 font_size: FontSize::Px(13.0),
                                                 ..default()

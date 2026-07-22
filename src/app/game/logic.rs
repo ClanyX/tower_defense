@@ -5,7 +5,6 @@ use crate::app::game::tower::*;
 use crate::app::ui::settings::*;
 use crate::app::ui::upgrade::*;
 use bevy::prelude::*;
-use bevy::time::common_conditions::on_timer;
 use bevy::window::PrimaryWindow;
 use std::time::Duration;
 
@@ -24,16 +23,22 @@ pub struct CoinCountText;
 #[derive(Resource)]
 pub struct CoinCount(pub u32);
 
+#[derive(Resource)]
+pub struct EnemySpawnTimer(pub Timer);
+
+impl Default for EnemySpawnTimer {
+    fn default() -> Self {
+        Self(Timer::from_seconds(2.0, TimerMode::Repeating))
+    }
+}
+
 pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<EnemySpawnTimer>();
         app.add_systems(
             Update,
-            (
-                tower_damage,
-                enemy_push.run_if(on_timer(Duration::from_secs(2))),
-            )
-                .run_if(in_state(AppState::InGame)),
+            (tower_damage, enemy_push).run_if(in_state(AppState::InGame)),
         );
     }
 }
@@ -49,6 +54,7 @@ pub fn spawn_game(
     commands.insert_resource(KillCount(0));
     commands.insert_resource(CoinCount(0));
     commands.insert_resource(UpgradeCosts::default());
+    commands.insert_resource(EnemySpawnTimer::default());
 
     let window = match q_window.single() {
         Ok(w) => w,
@@ -415,18 +421,47 @@ pub fn player_shooting(
     }
 }
 
-//Spawning enemy rows
-pub fn enemy_push(mut commands: Commands, q_window: Query<&Window, With<PrimaryWindow>>) {
-    let window = match q_window.single() {
-        Ok(w) => w,
-        Err(_) => return,
-    };
+// Spawning enemy rows based on score / kill count
+pub fn enemy_push(
+    mut commands: Commands,
+    q_window: Query<&Window, With<PrimaryWindow>>,
+    time: Res<Time>,
+    mut timer: ResMut<EnemySpawnTimer>,
+    kill_count: Res<KillCount>,
+) {
+    let score = kill_count.0;
 
-    let window_width = window.width();
-    let window_height = window.height();
+    // Dynamically adjust spawn timer duration based on score (starts at 2.0s, decreases down to minimum 0.4s)
+    let target_interval = (2.0 - (score as f32 * 0.03)).max(0.4);
+    timer
+        .0
+        .set_duration(Duration::from_secs_f32(target_interval));
 
-    let enemy = Enemy::new(&window_width, &window_height);
-    Enemy::spawn_enemy(&mut commands, enemy);
+    timer.0.tick(time.delta());
+
+    if timer.0.just_finished() {
+        let window = match q_window.single() {
+            Ok(w) => w,
+            Err(_) => return,
+        };
+
+        let window_width = window.width();
+        let window_height = window.height();
+
+        let mut enemy = Enemy::new(&window_width, &window_height);
+
+        // Edit enemy properties based on score:
+        // - HP increases smoothly with score (+1 HP per 2 kills)
+        // - Speed increases smoothly (+1.5 speed per kill up to a max of 250)
+        // - Reward increases with higher score (+1 coin reward per 5 kills)
+        // - Damage to tower increases with score (+1 damage per 10 kills)
+        enemy.hp = 5 + (score / 2) as i32;
+        enemy.speed = (100.0 + score as f32 * 1.5).min(250.0);
+        enemy.reward = 2 + (score / 5);
+        enemy.damage = 1 + (score / 10) as i32;
+
+        Enemy::spawn_enemy(&mut commands, enemy);
+    }
 }
 
 // System to update the KILLS text in the HUD dynamically
@@ -472,7 +507,10 @@ pub fn tower_damage(
         if enemy_right_edge >= tower_left_edge {
             commands.entity(enemy_entity).despawn();
             if tower.hp > 0 {
-                tower.hp -= 1;
+                tower.hp -= enemy.damage;
+                if tower.hp < 0 {
+                    tower.hp = 0;
+                }
             }
         }
     }
