@@ -335,6 +335,9 @@ pub fn in_game_input(
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyU) {
         show_upgrade.0 = !show_upgrade.0;
+        if show_upgrade.0 {
+            show_settings.0 = false;
+        }
     }
     if keyboard_input.just_pressed(KeyCode::Escape) {
         if show_upgrade.0 {

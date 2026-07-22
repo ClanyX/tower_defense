@@ -1,5 +1,6 @@
 use crate::app::game::logic::{CoinCount, KillCount};
 use crate::app::game::player::Player;
+use crate::app::ui::settings::ShowInGameSettings;
 use bevy::prelude::*;
 
 // Resource to track dynamic upgrade costs
@@ -90,6 +91,7 @@ type UpgradeColorFilter = (Changed<Interaction>, With<Button>);
 pub fn handle_upgrade_button_clicks(
     mut interaction_query: Query<UpgradeInteractionComponents, UpgradeInteractionFilter>,
     mut show_upgrade: ResMut<ShowUpgrade>,
+    mut show_settings: ResMut<ShowInGameSettings>,
     mut q_player: Query<&mut Player>,
     mut coin_count: ResMut<CoinCount>,
     mut upgrade_costs: ResMut<UpgradeCosts>,
@@ -100,7 +102,10 @@ pub fn handle_upgrade_button_clicks(
         if *interaction == Interaction::Pressed {
             match button_action {
                 UpgradeButton::OpenUpgrades => {
-                    show_upgrade.0 = true;
+                    show_upgrade.0 = !show_upgrade.0;
+                    if show_upgrade.0 {
+                        show_settings.0 = false;
+                    }
                 }
                 UpgradeButton::Close => {
                     show_upgrade.0 = false;
@@ -305,6 +310,7 @@ pub fn update_upgrade_button_colors(
 // System to toggle visibility of the upgrade menu overlay and pause/unpause time
 pub fn toggle_upgrade_visibility(
     show_upgrade: Res<ShowUpgrade>,
+    show_settings: Res<ShowInGameSettings>,
     mut query: Query<&mut Node, With<InGameUpgradesModal>>,
     mut time: ResMut<Time<Virtual>>,
 ) {
@@ -316,7 +322,9 @@ pub fn toggle_upgrade_visibility(
             time.pause();
         } else {
             node.display = Display::None;
-            time.unpause();
+            if !show_settings.0 {
+                time.unpause();
+            }
         }
     }
 }
