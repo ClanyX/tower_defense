@@ -1,6 +1,7 @@
 use crate::app::game::logic::{CoinCount, KillCount};
 use crate::app::game::player::Player;
 use crate::app::ui::settings::ShowInGameSettings;
+use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 
 // Resource to track dynamic upgrade costs
@@ -175,40 +176,43 @@ type MultishotBtnTextFilter = (
     Without<ReloadText>,
 );
 
+#[derive(SystemParam)]
+pub struct UpgradeMenuTextQueries<'w, 's> {
+    pub upgrade_costs: Res<'w, UpgradeCosts>,
+    pub kill_count: Res<'w, KillCount>,
+    pub q_player: Query<'w, 's, &'static Player>,
+    pub q_damage_text: Query<'w, 's, &'static mut Text, (With<DamageText>, Without<ReloadText>)>,
+    pub q_reload_text: Query<'w, 's, &'static mut Text, (With<ReloadText>, Without<DamageText>)>,
+    pub q_multishot_btn_text: Query<'w, 's, &'static mut Text, MultishotBtnTextFilter>,
+    pub q_damage_btn_text: Query<'w, 's, &'static mut Text, DamageBtnTextFilter>,
+    pub q_reload_btn_text: Query<'w, 's, &'static mut Text, ReloadBtnTextFilter>,
+}
+
 // System to update dynamic text in the upgrade menu
-pub fn update_upgrade_menu_text(
-    upgrade_costs: Res<UpgradeCosts>,
-    kill_count: Res<KillCount>,
-    q_player: Query<&Player>,
-    mut q_damage_text: Query<&mut Text, (With<DamageText>, Without<ReloadText>)>,
-    mut q_reload_text: Query<&mut Text, (With<ReloadText>, Without<DamageText>)>,
-    mut q_multishot_btn_text: Query<&mut Text, MultishotBtnTextFilter>,
-    mut q_damage_btn_text: Query<&mut Text, DamageBtnTextFilter>,
-    mut q_reload_btn_text: Query<&mut Text, ReloadBtnTextFilter>,
-) {
-    let score = kill_count.0;
-    if let Ok(player) = q_player.single() {
-        for mut text in &mut q_damage_text {
+pub fn update_upgrade_menu_text(mut queries: UpgradeMenuTextQueries) {
+    let score = queries.kill_count.0;
+    if let Ok(player) = queries.q_player.single() {
+        for mut text in &mut queries.q_damage_text {
             let val = format!("DAMAGE: {}", player.damage);
             if text.0 != val {
                 text.0 = val;
             }
         }
-        for mut text in &mut q_reload_text {
+        for mut text in &mut queries.q_reload_text {
             let secs = player.reload.duration().as_secs_f32();
             let val = format!("RELOAD: {:.1}s", secs);
             if text.0 != val {
                 text.0 = val;
             }
         }
-        for mut text in &mut q_multishot_btn_text {
+        for mut text in &mut queries.q_multishot_btn_text {
             if player.multishot {
                 let val = "MultiShot is active".to_string();
                 if text.0 != val {
                     text.0 = val;
                 }
             } else {
-                let cost = upgrade_costs.get_multishot_cost(score);
+                let cost = queries.upgrade_costs.get_multishot_cost(score);
                 let val = format!("Unlock MultiShot: {} COINS", cost);
                 if text.0 != val {
                     text.0 = val;
@@ -216,16 +220,16 @@ pub fn update_upgrade_menu_text(
             }
         }
     }
-    if upgrade_costs.is_changed() || kill_count.is_changed() {
-        for mut text in &mut q_damage_btn_text {
-            let cost = upgrade_costs.get_damage_cost(score);
+    if queries.upgrade_costs.is_changed() || queries.kill_count.is_changed() {
+        for mut text in &mut queries.q_damage_btn_text {
+            let cost = queries.upgrade_costs.get_damage_cost(score);
             let val = format!("+1 ({} COINS)", cost);
             if text.0 != val {
                 text.0 = val;
             }
         }
-        for mut text in &mut q_reload_btn_text {
-            let cost = upgrade_costs.get_reload_cost(score);
+        for mut text in &mut queries.q_reload_btn_text {
+            let cost = queries.upgrade_costs.get_reload_cost(score);
             let val = format!("-0.1s ({} COINS)", cost);
             if text.0 != val {
                 text.0 = val;
