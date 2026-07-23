@@ -2,6 +2,7 @@ use crate::AppState;
 use crate::app::game::enemy::*;
 use crate::app::game::player::*;
 use crate::app::game::tower::*;
+use crate::app::ui::ability::*;
 use crate::app::ui::settings::*;
 use crate::app::ui::upgrade::*;
 use bevy::prelude::*;
@@ -312,6 +313,9 @@ pub fn spawn_game(
 
             // UPGRADE OVERLAY MODAL (Hidden by default)
             spawn_upgrade_modal(parent);
+
+            // ABILITY OVERLAY MODAL
+            spawn_ability_modal(parent);
         });
 
     // SPAWN TOWER
