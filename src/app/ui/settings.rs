@@ -1,4 +1,5 @@
 use crate::AppState;
+use crate::app::ui::upgrade::ShowUpgrade;
 use bevy::ecs::system::SystemParam;
 use bevy::prelude::*;
 use bevy::window::{MonitorSelection, PrimaryWindow, WindowMode};
@@ -196,6 +197,7 @@ pub fn despawn_launcher_ui(mut commands: Commands, query: Query<Entity, With<Cle
 // Update the visibility of the settings overlay modal dynamically
 pub fn toggle_settings_visibility(
     show_settings: Res<ShowInGameSettings>,
+    show_upgrade: Res<ShowUpgrade>,
     mut query: Query<&mut Node, With<InGameSettingsModal>>,
     mut time: ResMut<Time<Virtual>>,
 ) {
@@ -207,7 +209,9 @@ pub fn toggle_settings_visibility(
             time.pause();
         } else {
             node.display = Display::None;
-            time.unpause();
+            if !show_upgrade.0 {
+                time.unpause();
+            }
         }
     }
 }
@@ -506,6 +510,7 @@ pub struct ButtonClickParams<'w, 's> {
     pub next_state: ResMut<'w, NextState<AppState>>,
     pub q_window: Query<'w, 's, &'static mut Window, With<PrimaryWindow>>,
     pub show_in_game_settings: ResMut<'w, ShowInGameSettings>,
+    pub show_upgrade: ResMut<'w, ShowUpgrade>,
     pub app_exit_events: MessageWriter<'w, AppExit>,
     pub current_state: Res<'w, State<AppState>>,
 }
@@ -565,7 +570,10 @@ pub fn handle_button_clicks(
                     params.app_exit_events.write(AppExit::Success);
                 }
                 SettingsButton::OpenSettings => {
-                    params.show_in_game_settings.0 = true;
+                    params.show_in_game_settings.0 = !params.show_in_game_settings.0;
+                    if params.show_in_game_settings.0 {
+                        params.show_upgrade.0 = false;
+                    }
                 }
                 SettingsButton::BackToGame => {
                     params.show_in_game_settings.0 = false;
