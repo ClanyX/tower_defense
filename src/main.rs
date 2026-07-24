@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::app::game::enemy::{move_enemy, update_enemy_hp_text};
 use crate::app::game::logic::*;
+use crate::app::ui::ability::*;
 use crate::app::ui::settings::*;
 use crate::app::ui::upgrade::*;
 
@@ -63,6 +64,8 @@ fn main() {
                 update_tower_hp_text,
                 update_upgrade_menu_text,
                 check_game_over,
+                handle_ability_button_clicks,
+                tick_ability_cooldowns,
             )
                 .run_if(in_state(AppState::InGame)),
         )
