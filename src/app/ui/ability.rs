@@ -75,6 +75,7 @@ pub fn spawn_ability_modal(parent: &mut ChildSpawnerCommands) {
                 },
                 ..default()
             },
+            ZIndex::Local(-1),
             BackgroundColor(Color::NONE),
         ))
         .with_children(|container| {
@@ -245,7 +246,7 @@ pub fn handle_ability_button_clicks(
                     if let Some(ref mut coin_bonus) = coin_bonus_opt
                         && coin_bonus.reload.is_finished()
                     {
-                        // Coin reward scales with score/kills: base coins (25) + 2 coin per kill
+                        // Coin reward scales with kills: base coins (20) + 2 coins per kill
                         let scaled_coins = coin_bonus.coins + (kill_count.0 * 2);
                         coin_count.0 += scaled_coins;
                         coin_bonus.reload.reset();
