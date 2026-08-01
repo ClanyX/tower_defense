@@ -75,7 +75,6 @@ pub fn spawn_ability_modal(parent: &mut ChildSpawnerCommands) {
                 },
                 ..default()
             },
-            ZIndex::Local(-1),
             BackgroundColor(Color::NONE),
         ))
         .with_children(|container| {
