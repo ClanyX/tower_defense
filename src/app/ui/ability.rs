@@ -54,10 +54,11 @@ impl Default for CoinBonus {
     fn default() -> Self {
         let mut reload = Timer::from_seconds(10.0, TimerMode::Once);
         reload.set_elapsed(std::time::Duration::from_secs(10));
-        Self { coins: 25, reload }
+        Self { coins: 20, reload }
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn spawn_ability_modal(parent: &mut ChildSpawnerCommands) {
     parent
         .spawn((
@@ -183,6 +184,7 @@ pub fn spawn_ability_modal(parent: &mut ChildSpawnerCommands) {
         });
 }
 
+#[allow(clippy::type_complexity)]
 pub fn handle_ability_button_clicks(
     mut commands: Commands,
     mut interaction_query: Query<
@@ -205,44 +207,48 @@ pub fn handle_ability_button_clicks(
         if *interaction == Interaction::Pressed {
             match button_action {
                 AbilityButton::DamageAll => {
-                    if let Some(ref mut damage_all) = damage_all_opt {
-                        if damage_all.reload.is_finished() {
-                            let dmg = damage_all.dmg as i32;
-                            for (enemy_entity, mut enemy) in &mut q_enemies {
-                                if enemy.hp > 0 {
-                                    enemy.hp -= dmg;
-                                    if enemy.hp <= 0 {
-                                        commands.entity(enemy_entity).despawn();
-                                        kill_count.0 += 1;
-                                        coin_count.0 += enemy.reward;
-                                    }
+                    if let Some(ref mut damage_all) = damage_all_opt
+                        && damage_all.reload.is_finished()
+                    {
+                        // Damage scales with score/kills: base damage (10) + 0.5 damage per kill
+                        let scaled_dmg = (damage_all.dmg + kill_count.0 / 2) as i32;
+                        for (enemy_entity, mut enemy) in &mut q_enemies {
+                            if enemy.hp > 0 {
+                                enemy.hp -= scaled_dmg;
+                                if enemy.hp <= 0 {
+                                    commands.entity(enemy_entity).despawn();
+                                    kill_count.0 += 1;
+                                    coin_count.0 += enemy.reward;
                                 }
                             }
-                            damage_all.reload.reset();
                         }
+                        damage_all.reload.reset();
                     }
                 }
                 AbilityButton::Freeze => {
-                    if let Some(ref mut freeze) = freeze_opt {
-                        if freeze.reload.is_finished() {
-                            for (enemy_entity, _) in &q_enemies {
-                                commands
-                                    .entity(enemy_entity)
-                                    .insert(Frozen(Timer::from_seconds(
-                                        freeze.duration,
-                                        TimerMode::Once,
-                                    )));
-                            }
-                            freeze.reload.reset();
+                    if let Some(ref mut freeze) = freeze_opt
+                        && freeze.reload.is_finished()
+                    {
+                        // Freeze duration stays constant (3.0s) throughout the game
+                        for (enemy_entity, _) in &q_enemies {
+                            commands
+                                .entity(enemy_entity)
+                                .insert(Frozen(Timer::from_seconds(
+                                    freeze.duration,
+                                    TimerMode::Once,
+                                )));
                         }
+                        freeze.reload.reset();
                     }
                 }
                 AbilityButton::Coins => {
-                    if let Some(ref mut coin_bonus) = coin_bonus_opt {
-                        if coin_bonus.reload.is_finished() {
-                            coin_count.0 += coin_bonus.coins;
-                            coin_bonus.reload.reset();
-                        }
+                    if let Some(ref mut coin_bonus) = coin_bonus_opt
+                        && coin_bonus.reload.is_finished()
+                    {
+                        // Coin reward scales with score/kills: base coins (25) + 2 coin per kill
+                        let scaled_coins = coin_bonus.coins + (kill_count.0 * 2);
+                        coin_count.0 += scaled_coins;
+                        coin_bonus.reload.reset();
                     }
                 }
             }
@@ -250,6 +256,7 @@ pub fn handle_ability_button_clicks(
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn tick_ability_cooldowns(
     time: Res<Time>,
     mut q_damage_all: Query<

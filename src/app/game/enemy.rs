@@ -81,6 +81,7 @@ impl Enemy {
 #[derive(Component)]
 pub struct Frozen(pub Timer);
 
+#[allow(clippy::type_complexity)]
 pub fn move_enemy(
     mut commands: Commands,
     mut query: Query<(Entity, &mut Transform, &Enemy, Option<&mut Frozen>, Option<&mut Sprite>)>,
