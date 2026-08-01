@@ -78,9 +78,19 @@ impl Enemy {
     }
 }
 
+#[derive(Component)]
+pub struct Frozen(pub Timer);
+
+#[allow(clippy::type_complexity)]
 pub fn move_enemy(
     mut commands: Commands,
-    mut query: Query<(Entity, &mut Transform, &Enemy)>,
+    mut query: Query<(
+        Entity,
+        &mut Transform,
+        &Enemy,
+        Option<&mut Frozen>,
+        Option<&mut Sprite>,
+    )>,
     time: Res<Time>,
     q_window: Query<&Window, With<PrimaryWindow>>,
 ) {
@@ -93,7 +103,21 @@ pub fn move_enemy(
     // Despawn boundary is 50px past the right edge of the screen
     let right_limit = window.width() / 2.0 + 50.0;
 
-    for (entity, mut transform, enemy) in &mut query {
+    for (entity, mut transform, enemy, frozen_opt, mut sprite_opt) in &mut query {
+        if let Some(mut frozen) = frozen_opt {
+            frozen.0.tick(time.delta());
+            if let Some(ref mut sprite) = sprite_opt {
+                sprite.color = Color::srgb(0.3, 0.7, 1.0); // Cyan/Ice blue tint while frozen
+            }
+            if frozen.0.is_finished() {
+                commands.entity(entity).remove::<Frozen>();
+                if let Some(ref mut sprite) = sprite_opt {
+                    sprite.color = Color::from(Srgba::RED); // Reset color when unfrozen
+                }
+            }
+            continue; // Stop movement while frozen
+        }
+
         let displacement = enemy.direction * enemy.speed * time.delta_secs();
         transform.translation += displacement.extend(0.0);
 
